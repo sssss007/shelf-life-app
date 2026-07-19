@@ -1,0 +1,17 @@
+{
+  "name": "保质期管家 Pro Max",
+  "short_name": "保质期管家",
+  "start_url": "/shelf-life-app/index.html",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#007aff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
