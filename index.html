@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>保质期管家</title>
+<!-- PWA 配置 -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="保质期管家">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="保质期管家 - 轻松管理食品、日用品的保质期，扫码添加，过期提醒">
+<meta name="theme-color" content="#667eea">
+<script>if(window.innerWidth>500&&/Mobi|Android|iPhone/i.test(navigator.userAgent)){document.querySelector('meta[name=viewport]').content='width=414,initial-scale=1.0';location.reload()}</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:clamp(14px,3.8vw,22px);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif}
+body{background:#f0f2f5;min-height:100dvh;display:flex;flex-direction:column;color:#1d1d1f}
+.top-bar{background:#fff;display:flex;align-items:center;justify-content:space-between;padding:.7rem 1.2rem;border-bottom:1px solid rgba(0,0,0,0.04);position:sticky;top:0;z-index:100}
+.top-bar .left{display:flex;align-items:center;gap:.6rem}
+.top-bar .logo{width:2rem;height:2rem;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:.5rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;color:#fff}
+.top-bar h1{font-size:1rem;font-weight:600}
+.top-bar .right{display:flex;gap:.4rem}
+.top-bar .btn{background:rgba(0,0,0,0.04);border:none;border-radius:.5rem;padding:.35rem .7rem;font-size:.75rem;color:#666;cursor:pointer}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:13rem;background:#fff;border-right:1px solid rgba(0,0,0,0.04);padding:.8rem 0;flex-shrink:0;overflow-y:auto}
+.sidebar .st{padding:.3rem 1.2rem;font-size:.65rem;color:#999;font-weight:600;margin-top:.4rem}
+.sidebar .ni{display:flex;align-items:center;gap:.6rem;padding:.5rem 1.2rem;font-size:.78rem;color:#444;cursor:pointer;border:none;background:none;width:100%;text-align:left}
+.sidebar .ni:hover{background:rgba(0,0,0,0.03)}
+.sidebar .ni.act{background:rgba(102,126,234,0.1);color:#667eea;font-weight:600;border-right:2.5px solid #667eea}
+.sidebar .ni .ic{font-size:.9rem;width:1.3rem;text-align:center}
+.sidebar .ni .bd{margin-left:auto;background:#ff3b30;color:#fff;font-size:.6rem;padding:.05rem .4rem;border-radius:1rem}
+.content{flex:1;overflow-y:auto;padding:1rem 1.5rem;min-width:0}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+.ch h2{font-size:1.2rem;font-weight:600}
+.ch .ac{display:flex;gap:.5rem}
+.ch .bp{background:#667eea;color:#fff;border:none;border-radius:.5rem;padding:.4rem .9rem;font-size:.75rem;font-weight:600;cursor:pointer}
+.ch .bs{background:rgba(0,0,0,0.04);color:#666;border:none;border-radius:.5rem;padding:.4rem .9rem;font-size:.75rem;cursor:pointer}
+.sr{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem;margin-bottom:1.2rem}
+.sc{background:#fff;border-radius:.8rem;padding:1rem 1.1rem;border:1px solid rgba(0,0,0,0.04)}
+.sc .n{font-size:1.6rem;font-weight:700;line-height:1.2}
+.sc .n.g{color:#34c759}.sc .n.o{color:#ff9500}.sc .n.r{color:#ff3b30}
+.sc .l{font-size:.7rem;color:#999;margin-top:.15rem}
+.srch{display:flex;gap:.5rem;margin-bottom:1rem}
+.srch input{flex:1;padding:.55rem .8rem;border:1.5px solid rgba(0,0,0,0.06);border-radius:.6rem;font-size:.8rem;outline:none;background:#fff}
+.srch input:focus{border-color:#667eea}
+.srch .b{padding:.55rem .9rem;border-radius:.6rem;border:none;font-size:.75rem;cursor:pointer}
+.srch .bp{background:#667eea;color:#fff}.srch .bs{background:rgba(0,0,0,0.04);color:#666}
+.pl{display:flex;flex-direction:column;gap:.5rem}
+.pc{background:#fff;border-radius:.7rem;padding:.75rem 1rem;display:flex;align-items:center;gap:.8rem;cursor:pointer;border:1px solid rgba(0,0,0,0.04)}
+.pc:hover{border-color:rgba(102,126,234,0.2)}.pc:active{transform:scale(.98)}
+.pi{width:2.4rem;height:2.4rem;border-radius:.6rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.pif{flex:1;min-width:0}.pn{font-size:.82rem;font-weight:600;margin-bottom:.1rem}
+.pm{font-size:.68rem;color:#999}
+.pr{text-align:right;flex-shrink:0;min-width:3.8rem}
+.pd{font-size:1.1rem;font-weight:700}
+.pd.g{color:#34c759}.pd.o{color:#ff9500}.pd.r{color:#ff3b30;font-size:.9rem}
+.pde{font-size:.6rem;margin-top:.05rem}
+.pde.g{color:#34c759}.pde.o{color:#ff9500}.pde.r{color:#ff3b30;font-weight:600}
+.pdl{font-size:.58rem;color:#bbb}
+.tags{display:flex;gap:.4rem;overflow-x:auto;margin-bottom:1rem;scrollbar-width:none}
+.tags::-webkit-scrollbar{display:none}
+.tag{padding:.25rem .7rem;border-radius:1rem;font-size:.65rem;white-space:nowrap;border:none;cursor:pointer;background:#fff;color:#666;border:1px solid rgba(0,0,0,0.06);flex-shrink:0}
+.tag.act{background:#667eea;color:#fff;border-color:#667eea}
+.ov{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:200;justify-content:center;align-items:center}
+.ov.show{display:flex}
+.md{background:#fff;border-radius:1rem;padding:1.5rem;width:90%;max-width:420px;max-height:85vh;overflow-y:auto;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.mt{font-size:1rem;font-weight:600;margin-bottom:1.2rem;text-align:center}
+.fg{margin-bottom:.75rem}.fl{display:block;font-size:.7rem;color:#999;margin-bottom:.25rem}
+.fi{width:100%;padding:.55rem .7rem;border:1.5px solid rgba(0,0,0,0.06);border-radius:.5rem;font-size:.78rem;outline:none;background:#f8f9fb;color:#1d1d1f}
+.fi:focus{border-color:#667eea;background:#fff}.fi[readonly]{background:#eef3ee}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.br{display:flex;gap:.4rem;margin-bottom:.75rem}.br input{flex:1}
+.bp2{width:100%;padding:.65rem;background:#667eea;color:#fff;border:none;border-radius:.6rem;font-size:.8rem;font-weight:600;cursor:pointer;margin-top:.3rem}
+.bs2{width:100%;padding:.55rem;background:rgba(0,0,0,0.04);color:#666;border:none;border-radius:.6rem;font-size:.72rem;cursor:pointer;margin-top:.3rem}
+.so{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:#000;z-index:300;flex-direction:column}
+.so.show{display:flex}.sh{padding:.8rem 1.2rem;display:flex;justify-content:space-between;align-items:center}
+.sh h3{color:#fff;font-size:1rem}.sc2{width:2rem;height:2rem;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:#fff;font-size:1rem;cursor:pointer}
+#sb{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
+#sb video{width:100%;height:100%;object-fit:cover}
+.sg2{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50%;max-width:12rem;aspect-ratio:1;border:2px solid rgba(255,255,255,0.4);border-radius:.8rem;box-shadow:0 0 0 9999px rgba(0,0,0,0.5)}
+.sia{display:flex;gap:.4rem;padding:.6rem 1.2rem 1rem}
+.sia input{flex:1;padding:.55rem;border-radius:.5rem;border:none;font-size:.78rem;text-align:center;background:rgba(255,255,255,0.1);color:#fff;outline:none}
+.sia input::placeholder{color:rgba(255,255,255,0.4)}
+.sia button{padding:.55rem 1rem;border-radius:.5rem;border:none;background:#34c759;color:#fff;font-size:.72rem;font-weight:600;cursor:pointer}
+.toast{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.78);backdrop-filter:blur(10px);color:#fff;padding:.7rem 1.2rem;border-radius:.7rem;font-size:.75rem;z-index:500;display:none;text-align:center;max-width:15rem}
+.toast.show{display:block}
+@media(max-width:600px){.sidebar{width:auto;padding:.4rem 0}.sidebar .ni{padding:.4rem 1rem}.sidebar .ni .ic{width:1.1rem;font-size:.8rem}.sidebar .ni span:not(.ic){display:none}.sidebar .st{display:none}.content{padding:.8rem 1rem}}
+@media(max-width:480px){.sr{grid-template-columns:1fr;gap:.4rem}.sc{padding:.65rem .9rem}.sc .n{font-size:1.2rem}}
+</style>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(function(reg) { console.log('Service Worker 注册成功'); })
+    .catch(function(err) { console.log('Service Worker 注册失败:', err); });
+}
+</script>
+</head>
+<body>
+
+<div class="top-bar">
+<div class="left"><div class="logo">📋</div><h1>保质期管家</h1></div>
+<div class="right">
+<button class="btn" onclick="openScanner()">📷 扫码</button>
+<button class="btn" onclick="showModal('settingsModal')">⚙️</button>
+</div></div>
+
+<div class="main">
+<div class="sidebar">
+<div class="st">菜单</div>
+<button class="ni act" onclick="swTab('list',this)"><span class="ic">📋</span><span>商品清单</span></button>
+<button class="ni" onclick="swTab('expired',this)"><span class="ic">⚠️</span><span>即将过期</span><span class="bd" id="expBadge">0</span></button>
+<button class="ni" onclick="swTab('warehouse',this)"><span class="ic">🏪</span><span>存放位置</span></button>
+<button class="ni" onclick="swTab('stats',this)"><span class="ic">📊</span><span>数据统计</span></button>
+</div>
+
+<div class="content" id="content">
+<div class="ch"><h2 id="pageTitle">商品清单</h2><div class="ac"><button class="bp" onclick="showAdd()">＋ 添加</button></div></div>
+
+<div class="sr" id="statsRow">
+<div class="sc"><div class="n g">0</div><div class="l">正常商品</div></div>
+<div class="sc"><div class="n o">0</div><div class="l">即将过期</div></div>
+<div class="sc"><div class="n r">0</div><div class="l">已过期</div></div>
+</div>
+
+<div class="srch"><input id="searchInput" placeholder="搜索商品名称..." oninput="r()"><button class="b bs" onclick="document.getElementById('searchInput').value='';r()">✕</button></div>
+<div class="tags" id="tags"></div>
+<div class="pl" id="prodList"></div>
+</div></div>
+
+<!-- 添加编辑弹窗 -->
+<div class="ov" id="addModal">
+<div class="md">
+<div class="mt" id="mTitle">添加商品</div>
+<div class="br"><input class="fi" id="mBar" placeholder="输入13位条码"><button onclick="qBar()" style="width:44px;border-radius:6px;border:none;background:#667eea;color:#fff;font-size:14px;cursor:pointer">🔍</button></div>
+<div class="fg"><label class="fl">商品名称</label><input class="fi" id="eName" placeholder="例：蒙牛纯牛奶"></div>
+<div class="fr"><div class="fg"><label class="fl">分类</label><select class="fi" id="eCat"><option>食品</option><option>饮料</option><option>调味品</option><option>日用品</option><option>化妆品</option><option>药品</option><option>其他</option></select></div><div class="fg"><label class="fl">保质期(天)</label><input class="fi" id="eSl" type="number" placeholder="如180" oninput="ac()"></div></div>
+<div class="fr"><div class="fg"><label class="fl">生产日期</label><input class="fi" id="ePd" type="date" oninput="ac()"></div><div class="fg"><label class="fl">过期日期</label><input class="fi" id="eEd" type="date" readonly></div></div>
+<div class="fg"><label class="fl">存放位置</label><input class="fi" id="eLoc" placeholder="冰箱/橱柜/储物柜"></div>
+<div class="fg"><label class="fl">备注</label><input class="fi" id="eNote" placeholder="可选"></div>
+<button class="bp2" onclick="sv()">保存</button>
+<button class="bs2" onclick="closeModal('addModal')">取消</button>
+</div></div>
+
+<!-- 扫码 -->
+<div class="so" id="scannerOverlay">
+<div class="sh"><h3>扫描条码</h3><button class="sc2" onclick="closeS()">✕</button></div>
+<div id="sb"><div class="sg2"></div></div>
+<div class="sia"><input id="sManual" placeholder="手动输入条码..."><button onclick="mConfirm()">确认</button></div>
+</div>
+
+<!-- 设置 -->
+<div class="ov" id="settingsModal">
+<div class="md">
+<div class="mt">设置</div>
+<div class="fg"><label class="fl">API密钥（条码查询）</label><input class="fi" id="apiKey" placeholder="留空用默认免费API"></div>
+<div style="display:flex;gap:6px;margin-top:12px">
+<button class="bs2" style="flex:1;color:#ff3b30" onclick="localStorage.removeItem('sp');ld();r();closeModal('settingsModal');showToast('已清空')">清空数据</button>
+<button class="bs2" style="flex:1" onclick="closeModal('settingsModal')">关闭</button>
+</div></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let p=[],cc='all',ct='list',ei=null,sc=null
+const CS=['食品','饮料','调味品','日用品','化妆品','药品','其他']
+const CI={'食品':'🍚','饮料':'🥤','调味品':'🧂','日用品':'🧴','化妆品':'💄','药品':'💊','其他':'📦'}
+const CC={'食品':'#FF9F0A','饮料':'#007AFF','调味品':'#8E8E93','日用品':'#AF52DE','化妆品':'#FF2D55','药品':'#34C759','其他':'#8E8E93'}
+function ld(){try{p=JSON.parse(localStorage.getItem('sp'))||[]}catch(e){p=[]}if(!p.length)addS()}
+function sv(){localStorage.setItem('sp',JSON.stringify(p))}
+function fd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function gd(e){const t=new Date();t.setHours(0,0,0,0);const x=new Date(e);x.setHours(0,0,0,0);return Math.ceil((x-t)/864e5)}
+function gs(d){return d<0?'r':d<=7?'o':'g'}
+function addS(){const t=new Date();p=[{id:'1',name:'蒙牛纯牛奶',cat:'饮料',sl:180,pd:fd(new Date(t-20*864e5)),ed:fd(new Date(t+160*864e5)),loc:'冰箱',bar:'6901234567890',note:''},{id:'2',name:'金龙鱼食用油',cat:'调味品',sl:540,pd:fd(new Date(t-100*864e5)),ed:fd(new Date(t+440*864e5)),loc:'橱柜',bar:''},{id:'3',name:'奥利奥饼干',cat:'食品',sl:365,pd:fd(new Date(t-300*864e5)),ed:fd(new Date(t+65*864e5)),loc:'零食柜',bar:''},{id:'4',name:'海天酱油',cat:'调味品',sl:720,pd:fd(new Date(t-700*864e5)),ed:fd(new Date(t+20*864e5)),loc:'厨房',note:'快用完了',bar:''}];sv()}
+function ac(){const p=document.getElementById('ePd').value,s=parseInt(document.getElementById('eSl').value);if(p&&s&&s>0){const d=new Date(p);d.setDate(d.getDate()+s);document.getElementById('eEd').value=fd(d)}}
+function rT(){const el=document.getElementById('tags');el.innerHTML='<button class="tag act" onclick="swC(\'all\',this)">📦 全部</button>'+CS.map(c=>'<button class="tag" onclick="swC(\''+c+'\',this)">'+CI[c]+c+'</button>').join('')}
+function swC(c,b){cc=c;document.querySelectorAll('.tag').forEach(e=>e.classList.remove('act'));if(b)b.classList.add('act');r()}
+function swTab(t,b){ct=t;document.querySelectorAll('.ni').forEach(e=>e.classList.remove('act'));if(b)b.classList.add('act');const titles={'list':'商品清单','expired':'即将过期','warehouse':'存放位置','stats':'数据统计'};document.getElementById('pageTitle').textContent=titles[t]||'商品清单';if(t==='list'){cc='all';rT()}r()}
+function r(){const list=document.getElementById('prodList'),s=document.getElementById('searchInput').value.toLowerCase();let f=p.filter(x=>{if(ct==='expired'){const d=gd(x.ed);return d>=0&&d<=7}if(ct!=='list')return true;if(cc!=='all'&&x.cat!==cc)return false;if(s&&!x.name.toLowerCase().includes(s))return false;return true});f.sort((a,b)=>gd(a.ed)-gd(b.ed));const no=p.filter(x=>gd(x.ed)>7).length,wa=p.filter(x=>{const d=gd(x.ed);return d>=0&&d<=7}).length,ed=p.filter(x=>gd(x.ed)<0).length;document.getElementById('statsRow').innerHTML='<div class="sc"><div class="n g">'+no+'</div><div class="l">正常</div></div><div class="sc"><div class="n o">'+wa+'</div><div class="l">即将过期</div></div><div class="sc"><div class="n r">'+ed+'</div><div class="l">已过期</div></div>';document.getElementById('expBadge').textContent=wa;if(ct==='stats'){rS(list);return}if(ct==='warehouse'){rW(list);return}if(!f.length){list.innerHTML='<div style="text-align:center;padding:2rem;color:#999;font-size:.8rem">'+(ct==='expired'?'🎉 没有即将过期的商品':'📦 还没有商品')+'</div>';return}list.innerHTML=f.map(x=>{const d=gd(x.ed),s=gs(d),c=CC[x.cat]||'#8E8E93';return'<div class="pc" onclick="editP(\''+x.id+'\')"><div class="pi" style="background:'+c+'15">'+CI[x.cat]+'</div><div class="pif"><div class="pn">'+x.name+'</div><div class="pm">'+(x.loc?'📍 '+x.loc:'')+(x.bar?' · #'+x.bar.slice(-4):'')+(x.note?' · '+x.note:'')+'</div><div class="pm" style="font-size:.62rem">产 '+x.pd+' · 保'+x.sl+'天</div></div><div class="pr"><div class="pd '+s+'">'+(d<0?'已过期':d+'天')+'</div><div class="pde '+s+'">'+x.ed+'</div><div class="pdl">'+(d<0?'过期':d<=1?'到期':'剩余')+'</div></div></div>'}).join('')}
+function rS(list){const no=p.filter(x=>gd(x.ed)>7).length,wa=p.filter(x=>{const d=gd(x.ed);return d>=0&&d<=7}).length,ed=p.filter(x=>gd(x.ed)<0).length;const ca={};p.forEach(x=>{ca[x.cat]=(ca[x.cat]||0)+1});list.innerHTML='<div style="background:#fff;border-radius:.8rem;padding:1.2rem;border:1px solid rgba(0,0,0,0.04)"><h3 style="font-size:.9rem;font-weight:600;margin-bottom:.8rem">📊 概览</h3><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem"><div style="background:#eaffea;border-radius:.5rem;padding:.8rem;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#34c759">'+no+'</div><div style="font-size:.65rem;color:#666">正常</div></div><div style="background:#fff5e6;border-radius:.5rem;padding:.8rem;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#ff9500">'+wa+'</div><div style="font-size:.65rem;color:#666">将过期</div></div><div style="background:#ffeae8;border-radius:.5rem;padding:.8rem;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#ff3b30">'+ed+'</div><div style="font-size:.65rem;color:#666">已过期</div></div></div></div><div style="background:#fff;border-radius:.8rem;padding:1.2rem;margin-top:.6rem;border:1px solid rgba(0,0,0,0.04)"><h3 style="font-size:.9rem;font-weight:600;margin-bottom:.8rem">📂 分类统计</h3>'+Object.entries(ca).map(([c,n])=>'<div style="display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid #f5f5f5;font-size:.75rem"><span>'+CI[c]+c+'</span><span style="font-weight:600">'+n+'件</span></div>').join('')+'</div>'}
+function rW(list){const ls=[...new Set(p.map(x=>x.loc).filter(Boolean))],ul=p.filter(x=>!x.loc);list.innerHTML='<div style="background:#fff;border-radius:.8rem;padding:1.2rem;border:1px solid rgba(0,0,0,0.04)"><h3 style="font-size:.9rem;font-weight:600;margin-bottom:.8rem">🏪 存放位置</h3><div style="display:flex;flex-wrap:wrap;gap:.4rem">'+ls.map(l=>{const c=p.filter(x=>x.loc===l).length,e=p.filter(x=>x.loc===l&&gd(x.ed)<0).length;return'<div style="background:#f5f5f5;border-radius:.5rem;padding:.6rem .8rem;flex:1;min-width:5rem"><div style="font-size:.75rem;font-weight:600">📍 '+l+'</div><div style="font-size:.62rem;color:#999">'+c+'件'+(e?' <span style="color:#ff3b30">'+e+'过期</span>':'')+'</div></div>'}).join('')+(ul.length?'<div style="background:#fff5e6;border-radius:.5rem;padding:.6rem .8rem;flex:1;min-width:5rem"><div style="font-size:.75rem;font-weight:600">📦 未分类</div><div style="font-size:.62rem;color:#999">'+ul.length+'件</div></div>':'')+'</div></div>'+[...ls,...(ul.length?['未分类']:[])].map(l=>{const its=l==='未分类'?ul:p.filter(x=>x.loc===l);return'<div style="background:#fff;border-radius:.7rem;padding:.8rem 1rem;margin-top:.4rem;border:1px solid rgba(0,0,0,0.04)"><div style="font-size:.72rem;font-weight:600;color:#666;margin-bottom:.5rem">📍 '+l+'（'+its.length+'件）</div>'+its.slice(0,10).map(x=>{const d=gd(x.ed);return'<div style="display:flex;justify-content:space-between;padding:.35rem 0;font-size:.68rem;border-bottom:1px solid #f0f0f0"><span>'+x.name+'</span><span style="color:'+(d<0?'#ff3b30':d<=7?'#ff9500':'#34c759')+'">'+(d<0?'已过期':d+'天')+'</span></div>'}).join('')+(its.length>10?'<div style="text-align:center;font-size:.6rem;color:#999;padding:.3rem">还有'+(its.length-10)+'件...</div>':'')+'</div>'}).join('')}
+function showAdd(){ei=null;document.getElementById('mTitle').textContent='添加商品';['eName','eSl','eLoc','eNote','mBar'].forEach(id=>document.getElementById(id).value='');document.getElementById('eCat').value='食品';document.getElementById('ePd').value=fd(new Date());document.getElementById('eEd').value='';showModal('addModal')}
+function editP(id){const x=p.find(v=>v.id===id);if(!x)return;ei=id;document.getElementById('mTitle').textContent='编辑商品';document.getElementById('eName').value=x.name;document.getElementById('eCat').value=x.cat;document.getElementById('eSl').value=x.sl;document.getElementById('ePd').value=x.pd;document.getElementById('eEd').value=x.ed;document.getElementById('eLoc').value=x.loc||'';document.getElementById('eNote').value=x.note||'';document.getElementById('mBar').value=x.bar||'';showModal('addModal')}
+function sv(){ac();const fe=document.getElementById('eEd').value,n=document.getElementById('eName').value.trim(),ca=document.getElementById('eCat').value,s=parseInt(document.getElementById('eSl').value),pd=document.getElementById('ePd').value,l=document.getElementById('eLoc').value.trim(),no=document.getElementById('eNote').value.trim(),b=document.getElementById('mBar').value.trim();if(!n)return showToast('请输入名称');if(!s||s<=0)return showToast('请输入保质期');if(!pd)return showToast('请选生产日期');if(!fe)return showToast('请先输入日期');if(ei){const i=p.findIndex(x=>x.id===ei);if(i>=0)p[i]={...p[i],name:n,cat:ca,sl:s,pd:pd,ed:fe,loc:l,note:no,bar:b}}else p.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:n,cat:ca,sl:s,pd:pd,ed:fe,loc:l,note:no,bar:b});sv();closeModal('addModal');r();showToast('已保存')}
+async function qBar(){const c=document.getElementById('mBar').value.trim();if(!c||c.length<8)return showToast('输入有效条码');showToast('查询中...');let name='',cat='食品';try{const r=await fetch('https://www.mxnzp.com/api/barcode/goods/details?barcode='+c);const d=await r.json();if(d.code==1&&d.data){name=d.data.goodsName||'';if(name.includes('奶'))cat='饮料';else if(name.match(/油|酱|醋|料/))cat='调味品';else if(name.match(/洗|巾|纸/))cat='日用品';else if(name.match(/药|胶/))cat='药品';else if(name.match(/霜|乳|妆/))cat='化妆品';document.getElementById('eName').value=name;document.getElementById('eCat').value=cat;showToast('已获取');const url=encodeURIComponent(name);if(confirm('是否查看 '+name+' 的价格？'))window.open('https://search.jd.com/Search?keyword='+url,'_blank');return}}catch(e){}if(!name){if(confirm('未查到该条码，是否打开浏览器搜索？'))window.open('https://search.jd.com/Search?keyword='+c,'_blank');showToast('未找到，请手动填写')}}
+async function openS(){document.getElementById('scannerOverlay').classList.add('show');if(location.protocol==='file:'||!location.hostname){showToast('本地文件无法调用相机，请手动输入');document.querySelector('.sg2').style.display='none';document.getElementById('sb').style.display='none';return}if(location.protocol!=='https:'){showToast('请手动输入条码');return}try{if(typeof Html5Qrcode==='undefined')await new Promise((rs,rj)=>{const s=document.createElement('script');s.src='https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';s.onload=rs;s.onerror=rj;document.head.appendChild(s)});if(typeof Html5Qrcode!=='undefined'){sc=new Html5Qrcode('sb');await sc.start({facingMode:'environment'},{fps:10,qrbox:{width:200,height:200}},c=>{document.getElementById('mBar').value=c;closeS();showModal('addModal');setTimeout(()=>qBar(),300)},()=>{})}else showToast('扫码库加载失败，请手动输入')}catch(e){showToast('相机打开失败，请手动输入')}}
+async function closeS(){document.getElementById('scannerOverlay').classList.remove('show');document.querySelector('.sg2').style.display='';document.getElementById('sb').style.display='';if(sc){try{await sc.stop()}catch(e){}try{await sc.clear()}catch(e){}sc=null}}
+function mConfirm(){const c=document.getElementById('sManual').value.trim();if(c&&c.length>=8){document.getElementById('mBar').value=c;closeS();showModal('addModal');setTimeout(()=>qBar(),300)}else showToast('输入有效条码')}
+function showModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000)}
+document.querySelectorAll('.ov').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('show')})})
+window.onload=function(){ld();rT();r()}
+</script>
+</body>
+</html>
