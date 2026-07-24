@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>保质期管家 Pro Max v1.2.2</title>
+
+    <!-- PWA 配置 -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Tailwind CSS 与 Web Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@500;600;700;800&family=PingFang+SC:wght@500;600;700&display=swap">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['SF Pro Display', 'PingFang SC', 'sans-serif'] },
+                    colors: {
+                        apple: { green: '#34c759', orange: '#ff9500', red: '#ff3b30', blue: '#007aff', bg: '#f5f5f7' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; font-feature-settings: "pnum"; }
+        .custom-scroll::-webkit-scrollbar { display: none; }
+        
+        .liquid-glass-sidebar {
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(35px) saturate(210%);
+            -webkit-backdrop-filter: blur(35px) saturate(210%);
+            border-right: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: inset -1px 0px 0px rgba(255, 255, 255, 0.3), 4px 0px 40px rgba(0, 0, 0, 0.03);
+        }
+
+        .liquid-glass-dock {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(35px) saturate(210%);
+            -webkit-backdrop-filter: blur(35px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+        }
+
+        .liquid-fusion-layer {
+            filter: url('#liquid-goo');
+            -webkit-filter: url('#liquid-goo');
+        }
+
+        .liquid-blob {
+            background: linear-gradient(135deg, rgba(0, 122, 255, 0.95) 0%, rgba(142, 45, 226, 0.95) 100%);
+            box-shadow: 0 8px 24px rgba(0, 122, 255, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+            transition: all 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.12); opacity: 0.85; }
+        }
+        .pulse-badge { animation: pulse-glow 2s infinite cubic-bezier(0.4, 0, 0.6, 1); }
+
+        .list-animated-move, .list-animated-enter-active, .list-animated-leave-active {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .list-animated-enter-from { opacity: 0; transform: translateY(20px) scale(0.96); }
+        .list-animated-leave-to { opacity: 0; transform: translateY(-20px) scale(0.96); }
+        .list-animated-leave-active { position: absolute; width: calc(100% - 2.5rem); }
+
+        .fade-enter-active, .fade-leave-active { transition: all 0.25s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-up-enter-active { transition: all 0.4s cubic-bezier(0.34, 1.4, 0.64, 1); }
+        .slide-up-leave-active { transition: all 0.25s ease; }
+        .slide-up-enter-from { transform: translateY(100%) scale(0.92); opacity: 0; }
+        .slide-up-leave-to { transform: translateY(100%) scale(0.95); opacity: 0; }
+
+        .spring-btn { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s; }
+        .spring-btn:active { transform: scale(0.92); }
+
+        /* PWA 底部安全区适配 */
+        .pb-safe { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+    </style>
+</head>
+<body class="bg-apple-bg text-[#1d1d1f] antialiased min-h-screen flex flex-col select-none overflow-x-hidden text-base">
+
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="hidden">
+  <defs>
+    <filter id="liquid-goo">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+      <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+      <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+    </filter>
+  </defs>
+</svg>
+
+<div id="app" class="flex flex-col flex-1 pb-36 md:pb-0 md:pl-72">
+
+    <!-- 顶部导航栏 -->
+    <header class="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-black/[0.04] px-6 py-4 flex items-center justify-between transition-all">
+        <div class="flex items-center space-x-3.5">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-apple-blue to-purple-600 flex items-center justify-center text-white text-xl shadow-md shadow-apple-blue/20 transition-transform duration-300 hover:rotate-12">📋</div>
+            <h1 class="text-lg font-bold tracking-tight">保质期管家 <span class="text-xs bg-apple-blue/10 text-apple-blue px-2 py-0.5 rounded-md ml-1 font-bold">v1.2.2</span></h1>
+        </div>
+        <div class="flex items-center space-x-3">
+            <label class="relative bg-apple-blue text-white font-bold text-sm px-4 py-2.5 rounded-full shadow-lg shadow-apple-blue/20 spring-btn cursor-pointer flex items-center space-x-2">
+                <span class="text-base">📷</span>
+                <span>扫码/拍照</span>
+                <input type="file" accept="image/*" capture="environment" class="hidden" @change="handleNativePhoto">
+            </label>
+            <button @click="showSettings = true" class="p-2.5 bg-black/[0.04] active:bg-black/[0.09] rounded-full transition-transform duration-200 spring-btn text-[#48484a] text-base">⚙️</button>
+        </div>
+    </header>
+
+    <!-- 侧边栏 (桌面端) -->
+    <aside class="hidden md:flex flex-col fixed inset-y-0 left-0 w-72 liquid-glass-sidebar py-8 z-30 justify-between overflow-hidden">
+        <div class="space-y-8 relative z-10">
+            <div class="px-7 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-apple-blue to-purple-600 flex items-center justify-center text-white text-xl shadow-md shadow-apple-blue/10">📦</div>
+                <div class="flex flex-col">
+                    <h1 class="text-lg font-extrabold tracking-tight text-[#1d1d1f]">保质期管家</h1>
+                    <span class="text-[10px] text-apple-blue font-bold tracking-widest uppercase">Fluid Pro v1.2.2</span>
+                </div>
+            </div>
+            
+            <nav class="relative px-4 space-y-2">
+                <div class="absolute inset-x-4 top-0 bottom-0 pointer-events-none liquid-fusion-layer z-0">
+                    <div v-for="(tab, index) in tabs" :key="'blob-aside-'+tab.id" 
+                        class="absolute left-0 right-0 rounded-2xl liquid-blob"
+                        :style="{ 
+                            height: '52px', 
+                            top: (index * 60) + 'px', 
+                            opacity: currentTab === tab.id ? 1 : 0,
+                            transform: currentTab === tab.id ? 'scale(1)' : 'scale(0.85)',
+                            visibility: currentTab === tab.id ? 'visible' : 'hidden'
+                        }">
+                    </div>
+                </div>
+
+                <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" 
+                    class="w-full flex items-center px-5 rounded-2xl text-base font-bold transition-all duration-300 relative z-10 group select-none spring-btn"
+                    style="height: 52px; margin-top: 8px;">
+                    <span :class="['text-xl mr-4 transition-transform duration-300 group-hover:scale-110', currentTab === tab.id ? 'text-white' : 'text-[#48484a]']">{{ tab.icon }}</span>
+                    <span :class="['transition-colors duration-300', currentTab === tab.id ? 'text-white' : 'text-[#1d1d1f]']">{{ tab.name }}</span>
+                    <span v-if="tab.id === 'expired' && expBadgeCount > 0" :class="['ml-auto text-xs font-extrabold px-2.5 py-0.5 rounded-full shadow-sm pulse-badge', currentTab === tab.id ? 'bg-white text-apple-red' : 'bg-apple-red text-white']">{{ expBadgeCount }}</span>
+                </button>
+            </nav>
+        </div>
+
+        <div class="px-5 space-y-4 relative z-10">
+            <div class="bg-white/50 border border-white/80 rounded-2xl p-4 space-y-2.5 shadow-[inset_0_1px_2px_rgba(255,255,255,0.5)]">
+                <div class="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider">资产概览</div>
+                <div class="grid grid-cols-3 gap-1 text-center">
+                    <div><div class="text-sm font-bold text-emerald-600">{{ stats.normal }}</div><div class="text-[10px] text-gray-500 font-bold">安全</div></div>
+                    <div><div class="text-sm font-bold text-amber-500">{{ stats.warning }}</div><div class="text-[10px] text-gray-500 font-bold">临期</div></div>
+                    <div><div class="text-sm font-bold text-apple-red">{{ stats.expired }}</div><div class="text-[10px] text-gray-500 font-bold">过期</div></div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="flex-1 px-5 py-6 max-w-4xl w-full mx-auto space-y-6">
+        <section class="grid grid-cols-3 gap-4">
+            <div @click="currentTab = 'list'; currentCategory = 'all'" class="bg-emerald-50/80 backdrop-blur-md border border-emerald-100 rounded-2xl p-4 spring-btn cursor-pointer">
+                <div class="text-2xl font-extrabold text-emerald-600">{{ stats.normal }}</div>
+                <div class="text-xs text-emerald-700/80 font-bold mt-1">正常保质</div>
+            </div>
+            <div @click="currentTab = 'expired'" class="bg-amber-50/80 backdrop-blur-md border border-amber-100 rounded-2xl p-4 spring-btn cursor-pointer">
+                <div class="text-2xl font-extrabold text-amber-600">{{ stats.warning }}</div>
+                <div class="text-xs text-amber-700/80 font-bold mt-1">临期提醒</div>
+            </div>
+            <div @click="currentTab = 'expired'" class="bg-rose-50/80 backdrop-blur-md border border-rose-100 rounded-2xl p-4 spring-btn cursor-pointer">
+                <div class="text-2xl font-extrabold text-rose-600">{{ stats.expired }}</div>
+                <div class="text-xs text-rose-700/80 font-bold mt-1">已过保质</div>
+            </div>
+        </section>
+
+        <div v-if="currentTab === 'list' || currentTab === 'expired'" class="space-y-4">
+            <div class="space-y-3">
+                <div class="relative flex items-center">
+                    <input v-model="searchQuery" type="text" placeholder="搜索商品名称、存放位置、条码..." class="w-full bg-black/[0.03] focus:bg-white border-2 border-transparent focus:border-apple-blue/30 rounded-2xl pl-11 pr-11 py-3.5 text-base outline-none transition-all duration-300 shadow-sm focus:shadow-md">
+                    <span class="absolute left-4 text-gray-400 text-base">🔍</span>
+                    <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-4 w-6 h-6 rounded-full bg-black/10 flex items-center justify-center text-xs text-gray-500 spring-btn">✕</button>
+                </div>
+                <div v-if="currentTab === 'list'" class="flex space-x-2.5 overflow-x-auto custom-scroll py-1">
+                    <button @click="currentCategory = 'all'" :class="['px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 shadow-sm whitespace-nowrap spring-btn', currentCategory === 'all' ? 'bg-apple-blue text-white shadow-apple-blue/20' : 'bg-white border border-black/[0.06] text-[#48484a]']">📦 全部</button>
+                    <button v-for="(emoji, cat) in categoryInfo" :key="cat" @click="currentCategory = cat" :class="['px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 whitespace-nowrap shadow-sm spring-btn', currentCategory === cat ? 'bg-apple-blue text-white shadow-apple-blue/20' : 'bg-white border border-black/[0.06] text-[#48484a]']">
+                        {{ emoji }} {{ cat }}
+                    </button>
+                </div>
+            </div>
+
+            <transition-group name="list-animated" tag="div" class="space-y-3 relative">
+                <div v-for="item in filteredProducts" :key="item.id" @click="editProduct(item)" class="bg-white border border-black/[0.02] rounded-2xl p-4 flex items-center space-x-4 spring-btn cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-inner flex-shrink-0 transition-transform duration-300 group-hover:scale-110" :style="{ backgroundColor: (categoryColors[item.cat] || '#007AFF') + '15' }">
+                        {{ categoryInfo[item.cat] || '📦' }}
+                    </div>
+                    <div class="flex-1 min-w-0 space-y-0.5">
+                        <div class="text-base font-bold truncate text-[#1d1d1f]">{{ item.name }}</div>
+                        <div class="flex items-center space-x-2 text-xs text-[#86868b] font-semibold">
+                            <span v-if="item.loc">📍 {{ item.loc }}</span>
+                            <span v-if="item.loc && (item.note || item.bar)">·</span>
+                            <span v-if="item.note" class="truncate max-w-[140px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md">{{ item.note }}</span>
+                            <span v-if="!item.note && item.bar" class="font-mono text-gray-400 bg-black/[0.03] px-1.5 py-0.5 rounded-md text-[10px]">🔢 {{ item.bar }}</span>
+                        </div>
+                    </div>
+                    <div class="text-right flex flex-col items-end flex-shrink-0 pl-2">
+                        <div :class="['text-lg font-extrabold tracking-tight', getStatusClass(item.daysLeft)]">
+                            {{ item.daysLeft < 0 ? '已过期' : item.daysLeft + '天' }}
+                        </div>
+                        <div :class="['text-[10px] font-bold opacity-80', getStatusClass(item.daysLeft)]">{{ item.ed }}</div>
+                    </div>
+                </div>
+            </transition-group>
+            
+            <div v-if="filteredProducts.length === 0" class="text-center py-16 text-sm text-gray-400 font-bold transition-all">✨ 视界空空如也，添加一件商品吧</div>
+        </div>
+
+        <div v-if="currentTab === 'warehouse'" class="space-y-4">
+            <div class="bg-white border border-black/[0.03] rounded-2xl p-5 shadow-sm">
+                <h3 class="text-sm font-bold text-[#1d1d1f] mb-3">🏪 网格仓储空间</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div v-for="(count, loc) in warehouseStats" :key="loc" class="bg-apple-bg rounded-xl p-3 border border-black/[0.02] spring-btn">
+                        <div class="text-xs font-bold text-[#1d1d1f]">📍 {{ loc }}</div>
+                        <div class="text-[10px] text-gray-500 font-bold mt-1">{{ count }} 件物品</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="currentTab === 'stats'" class="space-y-4">
+            <div class="bg-white border border-black/[0.03] rounded-2xl p-5 shadow-sm">
+                <h3 class="text-sm font-bold text-[#1d1d1f] mb-3">📂 品类雷达比重</h3>
+                <div class="space-y-3">
+                    <div v-for="(count, cat) in categoryStats" :key="cat" class="flex items-center justify-between text-xs font-bold">
+                        <span class="text-[#48484a] w-16">{{ categoryInfo[cat] || '📦' }} {{ cat }}</span>
+                        <div class="flex-1 mx-3 h-2.5 bg-black/[0.03] rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-700 ease-out" :style="{ width: (count / (products.length || 1) * 100) + '%', backgroundColor: categoryColors[cat] || '#007AFF' }"></div>
+                        </div>
+                        <span class="font-extrabold text-[#1d1d1f] w-8 text-right">{{ count }}件</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 底部 Dock 导航栏 (移动端) -->
+    <div class="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg pb-safe">
+        <button @click="showAddModal()" class="absolute left-1/2 -translate-x-1/2 -top-14 w-14 h-14 bg-gradient-to-tr from-apple-blue to-purple-600 rounded-full flex items-center justify-center text-white text-3xl shadow-lg shadow-apple-blue/30 spring-btn z-50">＋</button>
+
+        <nav class="w-full h-16 liquid-glass-dock rounded-2xl flex items-center justify-between px-2 relative overflow-hidden">
+            <div class="absolute inset-y-2 left-2 right-2 pointer-events-none liquid-fusion-layer z-0 flex justify-between">
+                <div v-for="(tab, index) in tabs" :key="'blob-dock-'+tab.id" 
+                    class="rounded-xl liquid-blob"
+                    :style="{ 
+                        width: '22%',
+                        height: '100%',
+                        opacity: currentTab === tab.id ? 1 : 0,
+                        transform: currentTab === tab.id ? 'scale(1)' : 'scale(0.85)',
+                        visibility: currentTab === tab.id ? 'visible' : 'hidden'
+                    }">
+                </div>
+            </div>
+
+            <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" class="w-[22%] flex flex-col items-center justify-center h-full relative z-10 group spring-btn">
+                <span :class="['text-lg transition-transform duration-300 group-hover:scale-110', currentTab === tab.id ? 'text-white' : 'text-[#48484a]']">{{ tab.icon }}</span>
+                <span :class="['text-[10px] font-bold mt-0.5 whitespace-nowrap transition-colors duration-300', currentTab === tab.id ? 'text-white' : 'text-[#86868b]']">{{ tab.name }}</span>
+                <span v-if="tab.id === 'expired' && expBadgeCount > 0" :class="['absolute top-1 right-[10%] text-[8px] font-extrabold w-4 h-4 rounded-full flex items-center justify-center shadow-sm pulse-badge', currentTab === tab.id ? 'bg-white text-apple-red' : 'bg-apple-red text-white']">{{ expBadgeCount }}</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 弹窗 -->
+    <transition name="fade">
+        <div v-if="modalVisible" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-end md:items-center justify-center p-0 md:p-5" @click.self="modalVisible = false">
+            <transition name="slide-up">
+                <div v-if="modalVisible" class="bg-white w-full md:max-w-lg rounded-t-[2rem] md:rounded-[2rem] p-6 max-h-[88vh] overflow-y-auto custom-scroll shadow-2xl space-y-5 pb-safe">
+                    <div class="text-center font-extrabold text-base text-[#1d1d1f]">确认商品档案</div>
+                    
+                    <div class="bg-black/[0.02] border border-black/[0.04] p-3.5 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">🔢 商品条形码</label>
+                            <span v-if="form.bar && memoryDB[form.bar]" class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">🧠 已匹配本地记忆</span>
+                        </div>
+                        <input v-model="form.bar" type="text" pattern="[0-9]*" placeholder="扫码自动填入，或手动输入" @input="checkMemory(form.bar)" class="w-full bg-white border border-black/[0.1] focus:border-apple-blue/50 rounded-lg px-3 py-2 text-sm outline-none transition font-mono tracking-wider shadow-inner">
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">商品名称</label>
+                            <input v-model="form.name" type="text" placeholder="如：蒙牛纯牛奶 250ml" class="w-full bg-apple-bg rounded-lg px-3 py-2.5 text-sm outline-none transition font-medium focus:bg-white focus:ring-2 focus:ring-apple-blue/20">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">所属分类</label>
+                                <div class="relative">
+                                    <select v-model="form.cat" class="w-full bg-apple-bg rounded-lg px-3 py-2.5 text-sm outline-none transition appearance-none font-medium focus:bg-white">
+                                        <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                                    </select>
+                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs">▼</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">保质期 (天)</label>
+                                <input v-model.number="form.sl" type="number" placeholder="如：180" @input="calcExpiry" class="w-full bg-apple-bg rounded-lg px-3 py-2.5 text-sm outline-none transition font-medium focus:bg-white">
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2 overflow-x-auto custom-scroll pb-1">
+                            <span class="text-[10px] font-bold text-gray-400 whitespace-nowrap">快捷选期:</span>
+                            <button v-for="days in [7, 14, 30, 90, 180, 270, 365, 730]" :key="days" @click="setQuickShelfLife(days)" class="px-2.5 py-1 bg-black/[0.03] hover:bg-black/[0.08] text-xs font-bold rounded-md whitespace-nowrap spring-btn">
+                                {{ days }}天
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">生产日期</label>
+                                <input v-model="form.pd" type="date" @input="calcExpiry" class="w-full bg-apple-bg rounded-lg px-2.5 py-2.5 text-sm outline-none transition font-medium focus:bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">过期截止日</label>
+                                <input v-model="form.ed" type="date" readonly class="w-full bg-apple-bg/60 text-gray-500 rounded-lg px-2.5 py-2.5 text-sm outline-none font-bold">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">存放空间 / 位置</label>
+                            <input v-model="form.loc" type="text" placeholder="主卧/冰箱/冷藏室/零食箱" class="w-full bg-apple-bg rounded-lg px-3 py-2.5 text-sm outline-none transition font-medium focus:bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">备忘录</label>
+                            <input v-model="form.note" type="text" placeholder="有什么想特别备注的？" class="w-full bg-apple-bg rounded-lg px-3 py-2.5 text-sm outline-none transition font-medium focus:bg-white">
+                        </div>
+                    </div>
+
+                    <div class="pt-2 space-y-2">
+                        <button @click="saveProduct" class="w-full py-3 bg-gradient-to-tr from-apple-blue to-purple-600 text-white rounded-xl text-sm font-bold shadow-md spring-btn">存储并保存档案</button>
+                        <button v-if="isEdit" @click="deleteProduct" class="w-full py-2.5 bg-rose-50 text-apple-red rounded-xl text-xs font-bold spring-btn">永久删除此物品</button>
+                        <button @click="modalVisible = false" class="w-full py-2.5 bg-black/[0.03] text-gray-500 rounded-xl text-xs font-bold spring-btn">关闭</button>
+                    </div>
+                </div>
+            </transition>
+        </div>
+    </transition>
+
+    <!-- 设置弹窗 -->
+    <transition name="fade">
+        <div v-if="showSettings" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-5" @click.self="showSettings = false">
+            <div class="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl space-y-4 text-center">
+                <div class="font-bold text-base text-[#1d1d1f]">系统控制面板</div>
+                
+                <div class="text-xs text-gray-400 font-bold bg-black/[0.03] p-2.5 rounded-xl text-left">
+                    🧠 本地记忆库已积累：<span class="text-apple-blue font-extrabold">{{ Object.keys(memoryDB).length }}</span> 个常用商品条码
+                </div>
+
+                <div class="space-y-2 text-left pt-1">
+                    <button @click="requestNotification" class="w-full py-2.5 bg-apple-blue/10 text-apple-blue border border-apple-blue/20 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 spring-btn">
+                        <span>🔔</span>
+                        <span>开启系统级过期提醒推送</span>
+                    </button>
+                    
+                    <button @click="exportData" class="w-full py-2.5 bg-black/[0.04] text-[#1d1d1f] rounded-xl text-xs font-bold flex items-center justify-center space-x-2 spring-btn">
+                        <span>📥</span>
+                        <span>导出备份数据 (含记忆库)</span>
+                    </button>
+
+                    <label class="w-full py-2.5 bg-black/[0.04] text-[#1d1d1f] rounded-xl text-xs font-bold flex items-center justify-center space-x-2 spring-btn cursor-pointer">
+                        <span>📤</span>
+                        <span>恢复/导入本地备份文件</span>
+                        <input type="file" accept=".json" class="hidden" @change="importData">
+                    </label>
+                </div>
+
+                <hr class="border-black/[0.06]">
+
+                <div class="space-y-2">
+                    <button @click="confirmClearAll" class="w-full py-2.5 bg-rose-50 text-apple-red rounded-xl text-xs font-bold spring-btn">格式化清空所有数据</button>
+                    <button @click="showSettings = false" class="w-full py-2 bg-apple-bg text-[#48484a] rounded-xl text-xs font-bold spring-btn">关闭</button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- 全局 Toast -->
+    <transition name="fade">
+        <div v-if="toast.show" class="fixed top-1/3 left-1/2 -translate-x-1/2 z-50 bg-black/85 text-white text-xs font-bold px-4 py-2.5 rounded-xl backdrop-blur-md shadow-xl tracking-wide max-w-[280px] text-center">
+            {{ toast.msg }}
+        </div>
+    </transition>
+
+</div>
+
+<!-- Vue 3 + Quagga2 -->
+<script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
+
+<script>
+    // 注册 Service Worker 实现离线加载
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('Service Worker 注册成功:', reg.scope))
+                .catch(err => console.log('Service Worker 注册失败:', err));
+        });
+    }
+
+    const { createApp, ref, computed, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const products = ref([]);
+            const memoryDB = ref({});
+            const currentTab = ref('list');
+            const currentCategory = ref('all');
+            const searchQuery = ref('');
+            const modalVisible = ref(false);
+            const showSettings = ref(false);
+            const isEdit = ref(false);
+            const currentEditId = ref(null);
+
+            const toast = ref({ show: false, msg: '' });
+            const form = ref({ name: '', cat: '食品', sl: '', pd: '', ed: '', loc: '', note: '', bar: '' });
+
+            const categories = ['食品', '饮料', '调味品', '日用品', '化妆品', '药品', '其他'];
+            const categoryInfo = { '食品': '🍚', '饮料': '🥤', '调味品': '🧂', '日用品': '🧴', '化妆品': '💄', '药品': '💊', '其他': '📦' };
+            const categoryColors = { '食品': '#FF9F0A', '饮料': '#007AFF', '调味品': '#8E8E93', '日用品': '#AF52DE', '化妆品': '#FF2D55', '药品': '#34C759', '其他': '#8E8E93' };
+            const tabs = [
+                { id: 'list', name: '物品矩阵', icon: '📋' },
+                { id: 'expired', name: '临期警戒', icon: '⚠️' },
+                { id: 'warehouse', name: '地理分布', icon: '🏪' },
+                { id: 'stats', name: '品类雷达', icon: '📊' }
+            ];
+
+            const getFormatDate = (date) => {
+                return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+            };
+
+            const calcDaysLeft = (expiryDateStr) => {
+                const today = new Date(); today.setHours(0,0,0,0);
+                const target = new Date(expiryDateStr); target.setHours(0,0,0,0);
+                return Math.ceil((target - today) / 86400000);
+            };
+
+            const processedProducts = computed(() => {
+                return products.value.map(item => ({
+                    ...item,
+                    daysLeft: calcDaysLeft(item.ed)
+                })).sort((a, b) => a.daysLeft - b.daysLeft);
+            });
+
+            const filteredProducts = computed(() => {
+                const query = searchQuery.value.toLowerCase().trim();
+                return processedProducts.value.filter(item => {
+                    if (currentTab.value === 'expired') return item.daysLeft >= -365 && item.daysLeft <= 7;
+                    if (currentCategory.value !== 'all' && item.cat !== currentCategory.value) return false;
+                    if (query && !item.name.toLowerCase().includes(query) && !item.loc.toLowerCase().includes(query) && !(item.bar && item.bar.toString().includes(query))) return false;
+                    return true;
+                });
+            });
+
+            const stats = computed(() => {
+                let normal = 0, warning = 0, expired = 0;
+                processedProducts.value.forEach(item => {
+                    if (item.daysLeft < 0) expired++;
+                    else if (item.daysLeft <= 7) warning++;
+                    else normal++;
+                });
+                return { normal, warning, expired };
+            });
+
+            const expBadgeCount = computed(() => stats.value.warning);
+
+            const warehouseStats = computed(() => {
+                const locMap = {};
+                products.value.forEach(x => { if(x.loc) locMap[x.loc] = (locMap[x.loc] || 0) + 1 });
+                return locMap;
+            });
+
+            const categoryStats = computed(() => {
+                const catMap = {};
+                products.value.forEach(x => { catMap[x.cat] = (catMap[x.cat] || 0) + 1 });
+                return catMap;
+            });
+
+            // 图像压缩预处理提升 Quagga 识别成功率
+            const preprocessImage = (file, callback) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 1280;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim; }
+                        else { width = Math.round((width * maxDim) / height); height = maxDim; }
+                    }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const d = imgData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        const v = 0.2126 * d[i] + 0.7152 * d[i+1] + 0.0722 * d[i+2];
+                        const contrast = 1.2;
+                        const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+                        const nv = factor * (v - 128) + 128;
+                        d[i] = d[i+1] = d[i+2] = nv;
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    callback(canvas.toDataURL('image/jpeg', 0.85));
+                };
+                img.src = URL.createObjectURL(file);
+            };
+
+            const handleNativePhoto = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+
+                triggerToast('🔍 正在智能识别条形码...');
+                preprocessImage(file, (processedImgUrl) => {
+                    Quagga.decodeSingle({
+                        decoder: { readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader", "upc_e_reader"] },
+                        locate: true,
+                        src: processedImgUrl
+                    }, (result) => {
+                        if (result && result.codeResult && result.codeResult.code) {
+                            const code = result.codeResult.code;
+                            triggerToast('✅ 识别成功条码: ' + code);
+                            showAddModal(code);
+                        } else {
+                            triggerToast('⚠️ 未识别到清晰条码，已为你打开录入');
+                            showAddModal('');
+                        }
+                        e.target.value = '';
+                    });
+                });
+            };
+
+            const checkMemory = (barcode) => {
+                if (!barcode) return;
+                const match = memoryDB.value[barcode];
+                if (match) {
+                    if (!form.value.name) form.value.name = match.name;
+                    if (match.cat) form.value.cat = match.cat;
+                    if (match.sl && !form.value.sl) form.value.sl = match.sl;
+                    calcExpiry();
+                    triggerToast('🧠 命中记忆库：已自动填入 ' + match.name);
+                }
+            };
+
+            const setQuickShelfLife = (days) => {
+                form.value.sl = days;
+                calcExpiry();
+            };
+
+            const calcExpiry = () => {
+                if (form.value.pd && form.value.sl > 0) {
+                    const d = new Date(form.value.pd);
+                    d.setDate(d.getDate() + parseInt(form.value.sl));
+                    form.value.ed = getFormatDate(d);
+                }
+            };
+
+            const showAddModal = (presetBarcode = '') => {
+                isEdit.value = false;
+                currentEditId.value = null;
+                form.value = { 
+                    name: '', 
+                    cat: '食品', 
+                    sl: '', 
+                    pd: getFormatDate(new Date()), 
+                    ed: '', 
+                    loc: '', 
+                    note: '', 
+                    bar: presetBarcode 
+                };
+                modalVisible.value = true;
+                if (presetBarcode) checkMemory(presetBarcode);
+            };
+
+            const editProduct = (item) => {
+                isEdit.value = true;
+                currentEditId.value = item.id;
+                form.value = { ...item };
+                modalVisible.value = true;
+            };
+
+            const saveProduct = () => {
+                if (!form.value.name.trim()) return triggerToast('商品名称不能为空');
+                if (!form.value.sl || form.value.sl <= 0) return triggerToast('请输入合理的保质期限');
+                if (!form.value.pd) return triggerToast('请选择生产日期');
+                calcExpiry();
+
+                if (form.value.bar) {
+                    memoryDB.value[form.value.bar] = {
+                        name: form.value.name,
+                        cat: form.value.cat,
+                        sl: form.value.sl
+                    };
+                    saveMemoryData();
+                }
+
+                if (isEdit.value) {
+                    const idx = products.value.findIndex(x => x.id === currentEditId.value);
+                    if (idx >= 0) products.value[idx] = { ...form.value };
+                } else {
+                    products.value.push({
+                        ...form.value,
+                        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+                    });
+                }
+                saveData();
+                modalVisible.value = false;
+                triggerToast('商品档案与记忆已安全保存');
+            };
+
+            const deleteProduct = () => {
+                products.value = products.value.filter(x => x.id !== currentEditId.value);
+                saveData();
+                modalVisible.value = false;
+                triggerToast('档案已粉碎');
+            };
+
+            const requestNotification = () => {
+                if (!("Notification" in window)) return triggerToast('当前浏览器不支持系统通知');
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        triggerToast('🔔 系统级提醒已授权开启！');
+                        checkAndSendNotifications();
+                    } else {
+                        triggerToast('⚠️ 未获得通知授权');
+                    }
+                });
+            };
+
+            const checkAndSendNotifications = () => {
+                if ("Notification" in window && Notification.permission === "granted") {
+                    const warningItems = processedProducts.value.filter(x => x.daysLeft >= 0 && x.daysLeft <= 3);
+                    if (warningItems.length > 0) {
+                        const notification = new Notification("⚠️ 保质期管家提醒", {
+                            body: `你共有 ${warningItems.length} 件物品即将在3天内过期，点击查看临期清单！`,
+                            icon: "icon-192.png"
+                        });
+                        notification.onclick = () => {
+                            window.focus();
+                            currentTab.value = 'expired';
+                        };
+                    }
+                }
+            };
+
+            const exportData = () => {
+                const exportPayload = { products: products.value, memoryDB: memoryDB.value };
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `保质期资产备份_${getFormatDate(new Date())}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                triggerToast('📦 资产与记忆库同步导出成功！');
+            };
+
+            const importData = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (imported.products && Array.isArray(imported.products)) {
+                            products.value = imported.products;
+                            memoryDB.value = imported.memoryDB || {};
+                        } else if (Array.isArray(imported)) {
+                            products.value = imported;
+                        } else {
+                            return triggerToast('❌ JSON 文件格式不匹配');
+                        }
+                        saveData();
+                        saveMemoryData();
+                        triggerToast('📤 数据与记忆库恢复成功！');
+                    } catch(err) {
+                        triggerToast('❌ 读取备份文件失败');
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            };
+
+            const confirmClearAll = () => {
+                if (confirm("确定要清空所有数据和记忆库吗？该操作不可撤销！")) {
+                    products.value = [];
+                    memoryDB.value = {};
+                    saveData();
+                    saveMemoryData();
+                    showSettings.value = false;
+                    triggerToast('所有本地数据已格式化清空');
+                }
+            };
+
+            const triggerToast = (msg) => {
+                toast.value.msg = msg; toast.value.show = true;
+                setTimeout(() => toast.value.show = false, 2800);
+            };
+
+            const getStatusClass = (days) => {
+                if (days < 0) return 'text-apple-red';
+                if (days <= 7) return 'text-apple-orange';
+                return 'text-apple-green';
+            };
+
+            const saveData = () => localStorage.setItem('sp_pro_max_v3', JSON.stringify(products.value));
+            const saveMemoryData = () => localStorage.setItem('sp_memory_db_v1', JSON.stringify(memoryDB.value));
+            
+            onMounted(() => {
+                try {
+                    products.value = JSON.parse(localStorage.getItem('sp_pro_max_v3')) || [];
+                    memoryDB.value = JSON.parse(localStorage.getItem('sp_memory_db_v1')) || {};
+                } catch(e) { 
+                    products.value = []; memoryDB.value = {};
+                }
+                
+                if (products.value.length === 0) {
+                    const now = new Date();
+                    products.value = [
+                        { id: '1', name: '经典纯牛奶 250ml', cat: '饮料', sl: 180, pd: getFormatDate(new Date(now - 15 * 86400000)), ed: getFormatDate(new Date(now + 165 * 86400000)), loc: '厨房冷藏区', bar: '6901234567890', note: '给孩子喝的' },
+                        { id: '2', name: '特级非转基因大豆油', cat: '调味品', sl: 540, pd: getFormatDate(new Date(now - 120 * 86400000)), ed: getFormatDate(new Date(now + 420 * 86400000)), loc: '厨房橱柜区', bar: '', note: '' }
+                    ];
+                    memoryDB.value['6901234567890'] = { name: '经典纯牛奶 250ml', cat: '饮料', sl: 180 };
+                    saveData();
+                    saveMemoryData();
+                }
+
+                checkAndSendNotifications();
+            });
+
+            return {
+                products, memoryDB, currentTab, currentCategory, searchQuery, modalVisible, showSettings, isEdit, toast, form,
+                categories, categoryInfo, categoryColors, tabs, filteredProducts, stats, expBadgeCount, warehouseStats, categoryStats,
+                handleNativePhoto, checkMemory, setQuickShelfLife, calcExpiry, showAddModal, editProduct, saveProduct, deleteProduct,
+                requestNotification, exportData, importData, confirmClearAll, getStatusClass
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
