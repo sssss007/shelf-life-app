@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>保质期管家 Pro Max v1.4.1</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="dns-prefetch" href="https://cdn.tailwindcss.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"SF Pro Display"', '"PingFang SC"', 'sans-serif'] },
+                    colors: {
+                        apple: {
+                            green: '#34C759', orange: '#FF9500', red: '#FF3B30', blue: '#007AFF',
+                            indigo: '#9333EA', bg: '#F5F5F7', card: '#FFFFFF', subtext: '#8E8E93'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { -webkit-tap-highlight-color: transparent; font-feature-settings: "cv02","cv03","cv04","cv11"; }
+        .custom-scroll::-webkit-scrollbar { display: none; }
+        .glass-header { background: rgba(255,255,255,0.92); border-bottom: 1px solid rgba(0,0,0,0.05); transform: translateZ(0); }
+        .liquid-glass-sidebar { background: rgba(255,255,255,0.90); border-right: 1px solid rgba(0,0,0,0.05); box-shadow: 4px 0 40px rgba(0,0,0,0.03); transform: translateZ(0); }
+        .liquid-glass-dock { background: rgba(255,255,255,0.92); border: 1px solid rgba(255,255,255,0.80); box-shadow: 0 12px 40px rgba(0,0,0,0.08); transform: translateZ(0); }
+        .liquid-fusion-layer { filter: none; -webkit-filter: none; }
+        .liquid-blob { background: linear-gradient(135deg, rgba(0,122,255,0.95) 0%, rgba(142,45,226,0.95) 100%); box-shadow: 0 8px 24px rgba(0,122,255,0.25), inset 0 2px 4px rgba(255,255,255,0.40); transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease; will-change: transform, opacity; }
+        .sidebar-tab-indicator, .dock-tab-indicator { background: linear-gradient(135deg, rgba(0,122,255,0.96) 0%, rgba(142,45,226,0.96) 100%); box-shadow: 0 8px 24px rgba(0,122,255,0.25), inset 0 2px 4px rgba(255,255,255,0.40); transition: transform 0.22s cubic-bezier(0.16,1,0.3,1); will-change: transform; transform: translate3d(0,0,0); }
+        .sidebar-tab-indicator { height: 52px; border-radius: 1rem; }
+        .dock-tab-indicator { width: 25%; height: 100%; border-radius: 1rem; }
+        .spring-touch { transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), background-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease; will-change: transform; }
+        .spring-touch:active { transform: scale(0.95) !important; opacity: 0.88; }
+        .card-hover { transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), box-shadow 0.25s cubic-bezier(0.16,1,0.3,1); will-change: transform; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(0,122,255,0.12); }
+
+        .stats-collapse { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.35s cubic-bezier(0.16,1,0.3,1), margin 0.45s cubic-bezier(0.16,1,0.3,1); opacity: 1; }
+        .stats-collapse.collapsed { grid-template-rows: 0fr; opacity: 0; margin-bottom: -0.25rem; }
+        .stats-inner { min-height: 0; overflow: hidden; }
+        .search-sticky-wrap { transition: background-color 0.3s ease, box-shadow 0.3s ease, padding-top 0.3s ease, padding-bottom 0.3s ease; transform: translateZ(0); }
+
+        html, body { min-height: 100%; }
+        @media (max-width: 767px) {
+            html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+            body { position: fixed; inset: 0; width: 100%; }
+            #app { height: 100dvh; min-height: 100svh; overflow: hidden; overscroll-behavior: none; contain: layout style; }
+            #app > main { min-height: 0; height: 100%; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y; scrollbar-width: none; }
+            #app > main::-webkit-scrollbar { display: none; }
+            #app > header.header-enter { animation: none !important; transform: none !important; will-change: auto !important; }
+            #app > .dock-enter { animation: none !important; transform: none !important; will-change: auto !important; left: 4%; right: 4%; width: auto; max-width: none; }
+            #app > header, #app > .dock-enter { -webkit-backface-visibility: hidden; backface-visibility: hidden; }
+        }
+
+        @keyframes pulse-soft { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.85; } }
+        .pulse-badge { animation: pulse-soft 2.2s infinite ease-in-out; will-change: transform, opacity; }
+        .list-animated-move, .list-animated-leave-active { transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease; will-change: transform, opacity; }
+        .list-animated-enter-active { transition: transform 0.24s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease; will-change: transform, opacity; }
+        .list-animated-enter-from { opacity: 0; transform: translateY(18px) scale(0.96); }
+        .list-animated-leave-to { opacity: 0; transform: translateY(-16px) scale(0.97); }
+        .list-animated-leave-active { position: absolute; width: 100%; }
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.22s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .slide-up-enter-active { transition: transform 0.28s cubic-bezier(0.16,1,0.3,1), opacity 0.20s ease; will-change: transform, opacity; }
+        .slide-up-leave-active { transition: transform 0.16s cubic-bezier(0.7,0,0.84,0), opacity 0.14s ease; will-change: transform, opacity; }
+        .slide-up-enter-from { transform: translateY(14px) scale(0.96); opacity: 0; }
+        .slide-up-leave-to { transform: translateY(10px) scale(0.98); opacity: 0; }
+        .page-switch-enter-active { transition: transform 0.22s cubic-bezier(0.16,1,0.3,1), opacity 0.18s ease; will-change: transform, opacity; }
+        .page-switch-leave-active { position: absolute; inset-inline: 0; width: 100%; pointer-events: none; transition: transform 0.14s cubic-bezier(0.7,0,0.84,0), opacity 0.12s ease; will-change: transform, opacity; }
+        .page-switch-enter-from { opacity: 0; transform: translateY(8px); }
+        .page-switch-leave-to { opacity: 0; transform: translateY(-6px); }
+        .num-pop-enter-active { transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1); will-change: transform, opacity; }
+        .num-pop-leave-active { transition: all 0.12s ease; }
+        .num-pop-enter-from { opacity: 0; transform: translateY(-8px) scale(0.5); }
+        .num-pop-leave-to { opacity: 0; transform: translateY(8px) scale(0.5); }
+        .card-sheen::after { content: ''; position: absolute; top: 0; left: -70%; width: 45%; height: 100%; background: linear-gradient(105deg, transparent, rgba(255,255,255,0.55), transparent); transform: skewX(-20deg); pointer-events: none; transition: left 0.7s cubic-bezier(0.16,1,0.3,1); }
+        .card-sheen:hover::after { left: 130%; }
+        @keyframes float-soft { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-8px) rotate(3deg); } }
+        .float-soft { display: inline-block; animation: float-soft 2.6s ease-in-out infinite; will-change: transform; }
+        .toast-enter-active { transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); will-change: transform, opacity; }
+        .toast-leave-active { transition: all 0.2s ease; }
+        .toast-enter-from { opacity: 0; transform: translate(-50%,-14px) scale(0.8); }
+        .toast-leave-to { opacity: 0; transform: translate(-50%,-8px) scale(0.9); }
+        @keyframes header-drop { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+        .header-enter { animation: header-drop 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes sidebar-in { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+        .sidebar-enter { animation: sidebar-in 0.6s cubic-bezier(0.16,1,0.3,1) 0.08s both; }
+        @keyframes dock-up { from { opacity: 0; transform: translate(-50%,24px) scale(0.92); } to { opacity: 1; transform: translate(-50%,0) scale(1); } }
+        .dock-enter { animation: dock-up 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.12s both; }
+        @keyframes cat-fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        .cat-switch-anim { animation: cat-fade-in 0.20s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes cat-pop { 0% { transform: scale(0.85); } 55% { transform: scale(1.08); } 100% { transform: scale(1); } }
+        .cat-pop-anim { animation: cat-pop 0.32s cubic-bezier(0.34,1.56,0.64,1); }
+        .pb-safe { padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
+        [v-cloak] { display: none !important; }
+        #app-loading { position: fixed; inset: 0; z-index: 999; background: #F5F5F7; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: -apple-system, sans-serif; }
+        .spinner { width: 36px; height: 36px; border: 3px solid rgba(0,122,255,0.15); border-top-color: #007AFF; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .glass-card { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.02); box-shadow: 0 4px 12px rgba(0,0,0,0.015); }
+        .glass-list-item { background: #FFFFFF; border: 1px solid rgba(0,0,0,0.02); box-shadow: 0 4px 12px rgba(0,0,0,0.015); }
+        .gradient-text { color: #1D1D1F; }
+        .cat-active { background: #007AFF; box-shadow: 0 4px 12px rgba(0,122,255,0.20); }
+        .entry-modal { width: min(calc(100% - 2rem), 34rem); max-height: calc(100dvh - 2rem); border-radius: 2rem; display: flex; flex-direction: column; overflow: hidden; }
+        .entry-content { overflow: visible; flex: 0 1 auto; padding: 0.9rem 1rem; }
+        .entry-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; padding: 0.55rem 1rem max(0.75rem, env(safe-area-inset-bottom)); }
+        .entry-actions > button:first-child, .entry-actions > button:last-child:nth-child(2) { grid-column: 1 / -1; }
+        .entry-actions > :not([hidden]) ~ :not([hidden]) { margin-top: 0; }
+        .entry-fields > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
+        .entry-modal input[type="text"], .entry-modal input[type="date"] { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+        .entry-modal .ios-item { animation-duration: 0.22s; animation-delay: calc(var(--i, 0) * 20ms); }
+        .btn-glow { background-image: linear-gradient(135deg, #007AFF 0%, #9333EA 100%) !important; box-shadow: 0 8px 24px rgba(0,122,255,0.28); }
+        .btn-glow:active { background-image: linear-gradient(135deg, #9333EA 0%, #007AFF 100%) !important; }
+        @media (max-height: 680px) { .entry-modal { max-height: calc(100dvh - 1rem); border-radius: 1.5rem; } .entry-content { overflow-y: auto; padding: 0.9rem 1rem; } .entry-actions { padding: 0.5rem 1rem max(0.65rem, env(safe-area-inset-bottom)); } .entry-fields { row-gap: 0.6rem; } }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+        .ios-pop-enter-active { transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); will-change: transform, opacity; }
+        .ios-pop-leave-active { transition: all 0.18s cubic-bezier(0.7,0,0.84,0); }
+        .ios-pop-enter-from { opacity: 0; transform: scale(0.86) translateY(14px); }
+        .ios-pop-leave-to { opacity: 0; transform: scale(0.92) translateY(8px); }
+        @keyframes ios-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        .ios-item { animation: ios-fade-up 0.35s cubic-bezier(0.16,1,0.3,1) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+        .drop-enter-active { transition: all 0.25s cubic-bezier(0.34,1.56,0.64,1); will-change: transform, opacity; }
+        .drop-leave-active { transition: all 0.15s ease; }
+        .drop-enter-from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+        .drop-leave-to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
+</head>
+<body class="bg-apple-bg text-[#1C1C1E] antialiased min-h-screen flex flex-col select-none overflow-x-hidden text-base">
+
+<div id="app-loading">
+    <div class="spinner"></div>
+    <div style="margin-top: 16px; font-size: 13px; color: #8E8E93; font-weight: 600; letter-spacing: -0.2px;">正在载入资产档案...</div>
+</div>
+
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" class="hidden">
+  <defs>
+    <filter id="liquid-goo">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+      <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -8" result="goo" />
+      <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+    </filter>
+  </defs>
+</svg>
+
+<div id="app" v-cloak class="relative z-10 flex flex-col flex-1 pt-[60px] pb-32 md:pb-0 md:pl-72" @click="closeDropdowns">
+
+    <header class="fixed top-0 left-0 right-0 md:left-72 z-40 w-auto glass-header px-4 py-3 flex items-center justify-between transition-all header-enter">
+        <div class="flex items-center space-x-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-apple-blue to-apple-indigo flex items-center justify-center text-white text-lg shadow-md shadow-apple-blue/20">📋</div>
+            <div class="flex flex-col">
+                <div class="flex items-center space-x-1.5">
+                    <h1 class="text-base font-bold tracking-tight whitespace-nowrap gradient-text">保质期管家</h1>
+                    <span class="hidden min-[340px]:inline-block text-[10px] bg-apple-blue/10 text-apple-blue px-2 py-0.5 rounded-full font-extrabold">v1.4.1</span>
+                </div>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button @click="showAddModal()" class="bg-gradient-to-r from-apple-blue to-purple-600 active:from-purple-600 active:to-apple-blue text-white font-bold text-xs px-3.5 py-2 rounded-2xl spring-touch btn-glow flex items-center space-x-1">
+                <span class="text-sm leading-none">＋</span>
+                <span class="sr-only min-[480px]:not-sr-only">手动录入</span>
+            </button>
+            <label class="bg-white/80 hover:bg-white/90 active:bg-white text-[#1C1C1E] font-bold text-xs px-3 py-2 rounded-2xl spring-touch cursor-pointer flex items-center space-x-1 shadow-sm">
+                <span>📷</span>
+                <span class="sr-only min-[480px]:not-sr-only">拍照识别</span>
+                <input type="file" accept="image/*" capture="environment" class="hidden" @change="handleNativePhoto">
+            </label>
+            <button @click="showSettings = true" class="p-2 bg-white/80 hover:bg-white/90 active:bg-white rounded-2xl spring-touch text-[#3A3A3C] text-base shadow-sm">⚙️</button>
+        </div>
+    </header>
+
+    <aside class="hidden md:flex flex-col fixed inset-y-0 left-0 w-72 liquid-glass-sidebar py-8 z-30 justify-between overflow-hidden sidebar-enter">
+        <div class="space-y-8 relative z-10">
+            <div class="px-7 flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-apple-blue to-apple-indigo flex items-center justify-center text-white text-xl shadow-lg shadow-apple-blue/20">📦</div>
+                <div class="flex flex-col">
+                    <h1 class="text-lg font-black tracking-tight gradient-text">保质期管家</h1>
+                    <span class="text-[10px] text-apple-blue font-bold tracking-widest uppercase opacity-80">Fluid Pro v1.4.1</span>
+                </div>
+            </div>
+            <nav class="relative px-4 space-y-2">
+                <div class="absolute inset-x-4 top-2 pointer-events-none z-0">
+                    <div class="sidebar-tab-indicator" :style="{ transform: 'translate3d(0, ' + (activeTabIndex * 60) + 'px, 0)' }"></div>
+                </div>
+                <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" 
+                    class="w-full relative flex items-center justify-center rounded-2xl text-base font-bold transition-all duration-300 z-10 group select-none spring-touch"
+                    style="height: 52px; margin-top: 8px;">
+                    <span :class="['absolute left-5 text-xl transition-transform duration-300 group-hover:scale-110', currentTab === tab.id ? 'text-white' : 'text-[#3A3A3C]']">{{ tab.icon }}</span>
+                    <span :class="['transition-colors duration-300', currentTab === tab.id ? 'text-white' : 'text-[#1C1C1E]']">{{ tab.name }}</span>
+                    <span v-if="tab.id === 'expired' && expBadgeCount > 0" :class="['absolute right-4 text-xs font-black px-2.5 py-0.5 rounded-full shadow-sm pulse-badge', currentTab === tab.id ? 'bg-white text-apple-red' : 'bg-apple-red text-white']">{{ expBadgeCount }}</span>
+                </button>
+            </nav>
+        </div>
+        <div class="px-7 text-[11px] text-apple-subtext font-bold flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-apple-green animate-pulse"></span>
+            <span>系统正常运转中</span>
+        </div>
+    </aside>
+
+    <main class="flex-1 min-h-0 px-4 pt-2 pb-32 md:pb-0 max-w-4xl w-full mx-auto overflow-y-auto" ref="mainRef" @scroll="handleScroll">
+
+        <div class="stats-collapse" :class="{ 'collapsed': scrollY > 20 }">
+            <div class="stats-inner">
+                <section class="grid grid-cols-3 gap-3 py-3">
+                    <div @click="currentTab = 'list'; currentCategory = 'all'; expiredFilter = 'all'" 
+                         class="relative overflow-hidden rounded-2xl p-3.5 spring-touch cursor-pointer border border-emerald-200/60 bg-gradient-to-br from-emerald-50 to-emerald-100/50">
+                        <div class="absolute -right-1 -top-1 text-3xl opacity-[0.08] select-none pointer-events-none">✅</div>
+                        <div class="text-2xl font-black text-emerald-600 tracking-tight">
+                            <transition name="num-pop" mode="out-in"><span :key="stats.normal">{{ stats.normal }}</span></transition>
+                        </div>
+                        <div class="text-xs font-bold mt-1 text-emerald-700/80">正常保质</div>
+                    </div>
+                    <div @click="currentTab = 'expired'; expiredFilter = 'warning'" 
+                         class="relative overflow-hidden rounded-2xl p-3.5 spring-touch cursor-pointer border border-amber-200/60 bg-gradient-to-br from-amber-50 to-amber-100/50">
+                        <div class="absolute -right-1 -top-1 text-3xl opacity-[0.08] select-none pointer-events-none">⚠️</div>
+                        <div class="text-2xl font-black text-amber-600 tracking-tight">
+                            <transition name="num-pop" mode="out-in"><span :key="stats.warning">{{ stats.warning }}</span></transition>
+                        </div>
+                        <div class="text-xs font-bold mt-1 text-amber-700/80">临期提醒</div>
+                    </div>
+                    <div @click="currentTab = 'expired'; expiredFilter = 'expired'" 
+                         class="relative overflow-hidden rounded-2xl p-3.5 spring-touch cursor-pointer border border-rose-200/60 bg-gradient-to-br from-rose-50 to-rose-100/50">
+                        <div class="absolute -right-1 -top-1 text-3xl opacity-[0.08] select-none pointer-events-none">❌</div>
+                        <div class="text-2xl font-black text-rose-600 tracking-tight">
+                            <transition name="num-pop" mode="out-in"><span :key="stats.expired">{{ stats.expired }}</span></transition>
+                        </div>
+                        <div class="text-xs font-bold mt-1 text-rose-700/80">已过保质</div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div v-if="currentTab === 'list' || currentTab === 'expired'" 
+             class="sticky top-0 z-30 -mx-4 px-4 search-sticky-wrap"
+             :class="scrollY > 20 ? 'bg-white/96 shadow-[0_4px_24px_rgba(0,0,0,0.05)] py-3' : 'bg-transparent py-2'">
+            <div class="space-y-3">
+                <div class="relative flex items-center">
+                    <input v-model="searchQuery" type="text" placeholder="搜索商品名称、存放位置、条码..." 
+                           class="w-full bg-white/70 focus:bg-white border-2 border-transparent focus:border-apple-blue/50 rounded-2xl pl-11 pr-11 py-3 text-sm outline-none transition-all duration-300 shadow-none focus:shadow-md font-medium placeholder-apple-subtext">
+                    <span class="absolute left-4 text-apple-subtext text-base pointer-events-none">🔍</span>
+                    <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3.5 w-6 h-6 rounded-full bg-black/10 flex items-center justify-center text-xs text-[#3A3A3C] spring-touch">✕</button>
+                </div>
+                <div v-if="currentTab === 'list'" class="flex space-x-2 overflow-x-auto custom-scroll py-1">
+                    <button @click="currentCategory = 'all'" :class="['px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 shadow-sm whitespace-nowrap spring-touch', currentCategory === 'all' ? 'cat-active text-white cat-pop-anim' : 'bg-white border border-black/[0.06] text-[#48484A]']">📦 全部</button>
+                    <button v-for="(emoji, cat) in categoryInfo" :key="cat" @click="currentCategory = cat" :class="['px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 whitespace-nowrap shadow-sm spring-touch', currentCategory === cat ? 'cat-active text-white cat-pop-anim' : 'bg-white border border-black/[0.06] text-[#48484A]']">
+                        {{ emoji }} {{ cat }}
+                    </button>
+                </div>
+                <div v-if="currentTab === 'expired'" class="flex space-x-2 overflow-x-auto custom-scroll py-1">
+                    <button @click="expiredFilter = 'all'" :class="['px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 shadow-sm whitespace-nowrap spring-touch', expiredFilter === 'all' ? 'cat-active text-white cat-pop-anim' : 'bg-white border border-black/[0.06] text-[#48484A]']">⚠️ 全部警戒</button>
+                    <button @click="expiredFilter = 'warning'" :class="['px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 shadow-sm whitespace-nowrap spring-touch', expiredFilter === 'warning' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-white border border-black/[0.06] text-[#48484A]']">⏳ 临期 (0-7天)</button>
+                    <button @click="expiredFilter = 'expired'" :class="['px-4 py-1.5 rounded-full text-xs font-bold transition-all duration-200 shadow-sm whitespace-nowrap spring-touch', expiredFilter === 'expired' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-white border border-black/[0.06] text-[#48484A]']">❌ 已过期</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="relative page-switch-host mt-2">
+            <transition name="page-switch">
+                <div v-if="currentTab === 'list' || currentTab === 'expired'" :key="currentTab" class="space-y-4">
+                    <div v-if="filteredProducts.length > 0" :key="'cat-' + currentCategory + '-' + expiredFilter" class="cat-switch-anim">
+                        <transition-group name="list-animated" tag="div" class="space-y-2.5 relative">
+                            <div v-for="(item, index) in filteredProducts" :key="item.id" :style="{ '--i': index }" @click="editProduct(item)" class="glass-list-item rounded-2xl p-3.5 flex items-center space-x-3.5 spring-touch card-hover cursor-pointer">
+                                <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-lg shadow-inner flex-shrink-0" :style="{ backgroundColor: (categoryColors[item.cat] || '#007AFF') + '15' }">
+                                    {{ categoryInfo[item.cat] || '📦' }}
+                                </div>
+                                <div class="flex-1 min-w-0 space-y-0.5">
+                                    <div class="text-sm font-bold truncate text-[#1C1C1E]">{{ item.name }}</div>
+                                    <div class="flex items-center space-x-2 text-xs text-apple-subtext font-medium">
+                                        <span v-if="item.loc">📍 {{ item.loc }}</span>
+                                        <span v-if="item.loc && (item.note || item.bar)">·</span>
+                                        <span v-if="item.note" class="truncate max-w-[130px] text-apple-orange bg-apple-orange/10 px-1.5 py-0.5 rounded-md font-bold">{{ item.note }}</span>
+                                        <span v-if="!item.note && item.bar" class="font-mono text-apple-subtext bg-black/[0.04] px-1.5 py-0.5 rounded-md text-[10px]">🔢 {{ item.bar }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-right flex flex-col items-end flex-shrink-0 pl-2">
+                                    <div :class="['text-base font-black tracking-tight', getStatusClass(item.daysLeft)]">
+                                        {{ item.daysLeft < 0 ? '已过期' : item.daysLeft + '天' }}
+                                    </div>
+                                    <div :class="['text-[10px] font-bold opacity-80', getStatusClass(item.daysLeft)]">{{ item.ed }}</div>
+                                </div>
+                            </div>
+                        </transition-group>
+                    </div>
+                    <div v-else class="text-center py-20 text-sm text-apple-subtext font-bold transition-all cat-switch-anim"><span class="float-soft">✨</span> 空间空空如也，点击右上角录入商品吧</div>
+                </div>
+
+                <div v-else-if="currentTab === 'warehouse'" key="warehouse" class="space-y-4">
+                    <div class="glass-card gradient-ring relative rounded-2xl p-5">
+                        <h3 class="text-sm font-bold text-[#1C1C1E] mb-3">🏪 空间地理分布</h3>
+                        <div v-if="Object.keys(warehouseStats).length > 0" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div v-for="(count, loc) in warehouseStats" :key="loc" class="bg-apple-bg rounded-2xl p-3.5 border border-black/[0.02] spring-touch">
+                                <div class="text-xs font-bold text-[#1C1C1E] truncate">📍 {{ loc }}</div>
+                                <div class="text-[10px] text-apple-subtext font-bold mt-1">{{ count }} 件物品</div>
+                            </div>
+                        </div>
+                        <div v-else class="text-center py-10 text-xs text-apple-subtext font-bold">尚未录入带位置信息的商品</div>
+                    </div>
+                </div>
+
+                <div v-else-if="currentTab === 'stats'" key="stats" class="space-y-4">
+                    <div class="glass-card gradient-ring relative rounded-2xl p-5">
+                        <h3 class="text-sm font-bold text-[#1C1C1E] mb-4">📂 品类雷达占比</h3>
+                        <div class="space-y-3.5">
+                            <div v-for="(count, cat) in categoryStats" :key="cat" class="flex items-center justify-between text-xs font-bold">
+                                <span class="text-[#3A3A3C] w-20 truncate flex items-center space-x-1">
+                                    <span>{{ categoryInfo[cat] || '📦' }}</span>
+                                    <span>{{ cat }}</span>
+                                </span>
+                                <div class="flex-1 mx-3 h-2.5 bg-apple-bg rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-700 ease-out" :style="{ width: (count / (products.length || 1) * 100) + '%', backgroundColor: categoryColors[cat] || '#007AFF' }"></div>
+                                </div>
+                                <span class="font-extrabold text-[#1C1C1E] w-8 text-right">{{ count }}件</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </div>
+    </main>
+
+    <div class="md:hidden fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-lg pb-safe dock-enter">
+        <nav class="w-full h-16 liquid-glass-dock rounded-3xl grid grid-cols-4 items-center px-2 relative overflow-hidden">
+            <div class="absolute inset-y-2 left-2 right-2 pointer-events-none z-0">
+                <div class="dock-tab-indicator" :style="{ transform: 'translate3d(' + (activeTabIndex * 100) + '%, 0, 0)' }"></div>
+            </div>
+            <button v-for="tab in tabs" :key="tab.id" @click="currentTab = tab.id" class="w-full flex flex-col items-center justify-center h-full relative z-10 group spring-touch">
+                <span :class="['text-lg transition-all duration-300 group-hover:scale-110', currentTab === tab.id ? 'text-white scale-105 drop-shadow' : 'text-[#8E8E93]']">{{ tab.icon }}</span>
+                <span :class="['text-[11px] font-bold mt-0.5 whitespace-nowrap transition-all duration-300', currentTab === tab.id ? 'text-white font-extrabold' : 'text-[#8E8E93]']">{{ tab.name }}</span>
+                <span v-if="tab.id === 'expired' && expBadgeCount > 0" :class="['absolute top-2 right-[18%] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center shadow-md pulse-badge', currentTab === tab.id ? 'bg-white text-apple-red' : 'bg-apple-red text-white']">{{ expBadgeCount }}</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- 录入/编辑 弹窗 -->
+    <div v-if="modalVisible" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 md:p-5" @click.self="modalVisible = false">
+        <transition name="slide-up">
+            <div v-if="modalVisible" class="entry-modal glass-card">
+                <div class="entry-content custom-scroll space-y-3">
+                    <div class="text-center font-black text-base text-[#1C1C1E] tracking-tight pt-1 ios-item" :style="{ '--i': 0 }">商品档案明细</div>
+                    <div class="bg-apple-bg border border-black/[0.03] p-3.5 rounded-2xl space-y-1.5 ios-item" :style="{ '--i': 1 }">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider">🔢 商品条形码</label>
+                            <span v-if="matchedMemory" class="text-[10px] font-bold text-apple-green bg-apple-green/10 px-2 py-0.5 rounded-md">🧠 已匹配本地记忆</span>
+                        </div>
+                        <input v-model="form.bar" type="text" pattern="[0-9]*" placeholder="扫码自动填入，或手动输入" @input="checkMemory(form.bar)" class="w-full bg-white border border-black/[0.08] focus:border-apple-blue focus:ring-2 focus:ring-apple-blue/20 rounded-xl px-3 py-2 text-sm outline-none transition font-mono tracking-wider shadow-inner">
+                    </div>
+                    <div class="entry-fields space-y-3.5">
+                        <div class="ios-item" :style="{ '--i': 2 }">
+                            <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider mb-1">商品名称</label>
+                            <input v-model="form.name" type="text" placeholder="如：伊利蓝莓牛奶 250ml" class="w-full bg-apple-bg border-2 border-transparent focus:border-apple-blue focus:bg-white rounded-xl px-3.5 py-2.5 text-sm outline-none transition font-semibold">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 relative z-20 ios-item" :style="{ '--i': 3 }">
+                            <div class="relative">
+                                <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider mb-1">所属分类</label>
+                                <div @click.stop="isCategoryDropdownOpen = !isCategoryDropdownOpen" class="w-full h-11 bg-apple-bg hover:bg-black/[0.06] rounded-xl px-3.5 text-sm font-semibold flex items-center justify-between cursor-pointer transition">
+                                    <span class="flex items-center space-x-1.5 truncate">
+                                        <span>{{ categoryInfo[form.cat] || '📦' }}</span>
+                                        <span class="text-[#1C1C1E]">{{ form.cat }}</span>
+                                    </span>
+                                    <span class="text-apple-subtext text-[10px] transition-transform duration-200" :style="{ transform: isCategoryDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }">▼</span>
+                                </div>
+                                <transition name="drop">
+                                    <div v-if="isCategoryDropdownOpen" class="absolute left-0 right-0 top-full mt-1.5 glass-card rounded-2xl shadow-xl z-50 overflow-hidden py-1 max-h-48 overflow-y-auto">
+                                        <div v-for="(emoji, cat) in categoryInfo" :key="cat" @click.stop="form.cat = cat; isCategoryDropdownOpen = false" :class="['px-3.5 py-2.5 text-xs font-bold flex items-center space-x-2 cursor-pointer transition', form.cat === cat ? 'bg-apple-blue/10 text-apple-blue' : 'hover:bg-black/[0.04] text-[#3A3A3C]']">
+                                            <span>{{ emoji }}</span>
+                                            <span>{{ cat }}</span>
+                                        </div>
+                                    </div>
+                                </transition>
+                            </div>
+                            <!-- ===== 保质期：支持天/月单位切换 ===== -->
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider">保质期</label>
+                                    <span class="text-xs font-bold text-apple-green" v-if="computedShelfValue !== null">
+                                        = {{ computedShelfValue }}{{ shelfUnit === 'month' ? '个月' : '天' }}
+                                    </span>
+                                </div>
+                                <div class="w-full h-11 bg-apple-bg focus-within:bg-white border-2 border-transparent focus-within:border-apple-blue rounded-xl px-3 flex items-center transition">
+                                    <input v-model="shelfInputRaw" @input="handleShelfInput" type="text" 
+                                           :placeholder="shelfUnit === 'month' ? '如: 6 或 12' : '如: 180 或 365'" 
+                                           class="w-full text-sm font-bold text-[#1C1C1E] outline-none bg-transparent flex-1">
+                                    <div class="flex items-center space-x-1 ml-2 flex-shrink-0">
+                                        <button @click="switchUnit('day')" :class="['text-[10px] font-bold px-2 py-1 rounded-lg transition spring-touch', shelfUnit === 'day' ? 'bg-apple-blue text-white' : 'bg-black/5 text-[#8E8E93]']">天</button>
+                                        <button @click="switchUnit('month')" :class="['text-[10px] font-bold px-2 py-1 rounded-lg transition spring-touch', shelfUnit === 'month' ? 'bg-apple-blue text-white' : 'bg-black/5 text-[#8E8E93]']">月</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 天数快速按钮 -->
+                        <div class="space-y-2 pt-0.5 relative z-10 ios-item" :style="{ '--i': 4 }">
+                            <div class="grid grid-cols-5 gap-2">
+                                <button v-for="days in [7, 30, 90, 180, 365]" :key="'d'+days" 
+                                    @click="setQuickShelf(days, 'day')" 
+                                    :class="['h-8 rounded-xl text-[10px] font-bold transition-all border spring-touch', shelfUnit === 'day' && String(shelfInputRaw) === String(days) ? 'cat-active border-transparent text-white shadow-md shadow-apple-blue/25' : 'bg-apple-bg border-transparent hover:bg-black/[0.06] text-[#3A3A3C]']">
+                                    {{ days }}天
+                                </button>
+                            </div>
+                            <!-- 月数快速按钮 -->
+                            <div class="grid grid-cols-6 gap-2">
+                                <button v-for="months in [1, 3, 6, 12, 18, 24]" :key="'m'+months" 
+                                    @click="setQuickShelf(months, 'month')" 
+                                    :class="['h-8 rounded-xl text-[10px] font-bold transition-all border spring-touch', shelfUnit === 'month' && String(shelfInputRaw) === String(months) ? 'cat-active border-transparent text-white shadow-md shadow-apple-blue/25' : 'bg-apple-blue/5 border-transparent hover:bg-apple-blue/10 text-apple-blue']">
+                                    {{ months }}个月
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 pt-1 ios-item" :style="{ '--i': 5 }">
+                            <div>
+                                <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider mb-1">生产日期</label>
+                                <input v-model="form.pd" type="date" @input="calcExpiry" class="w-full bg-apple-bg border-2 border-transparent focus:border-apple-blue focus:bg-white rounded-xl px-3 py-2 text-sm outline-none transition font-medium">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider mb-1">过期截止日</label>
+                                <input v-model="form.ed" type="date" @change="calcShelfLifeFromExpiry" class="w-full bg-apple-bg border-2 border-transparent focus:border-apple-blue focus:bg-white rounded-xl px-3 py-2 text-sm outline-none font-bold text-apple-blue">
+                            </div>
+                        </div>
+                        <div class="ios-item" :style="{ '--i': 6 }">
+                            <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider mb-1">存放空间 / 位置</label>
+                            <input v-model="form.loc" type="text" placeholder="主卧/冰箱/冷藏室/零食箱" class="w-full bg-apple-bg border-2 border-transparent focus:border-apple-blue focus:bg-white rounded-xl px-3.5 py-2.5 text-sm outline-none transition font-medium">
+                        </div>
+                        <div class="ios-item" :style="{ '--i': 7 }">
+                            <label class="block text-[10px] font-black text-apple-subtext uppercase tracking-wider mb-1">备忘录</label>
+                            <input v-model="form.note" type="text" placeholder="有什么想特别备注的？" class="w-full bg-apple-bg border-2 border-transparent focus:border-apple-blue focus:bg-white rounded-xl px-3.5 py-2.5 text-sm outline-none transition font-medium">
+                        </div>
+                    </div>
+                </div>
+                <div class="entry-actions space-y-2 border-t border-black/5">
+                    <button @click="saveProduct" class="w-full py-3 bg-gradient-to-tr from-apple-blue to-purple-600 text-white rounded-xl text-sm font-bold btn-glow spring-touch">存储并保存档案</button>
+                    <button v-if="isEdit" @click="deleteProduct" class="w-full py-2.5 bg-apple-red/10 text-apple-red rounded-xl text-xs font-bold spring-touch">永久删除此物品</button>
+                    <button @click="modalVisible = false" class="w-full py-2.5 bg-black/[0.04] text-apple-subtext rounded-xl text-xs font-bold spring-touch">关闭</button>
+                </div>
+            </div>
+        </transition>
+    </div>
+
+    <!-- 设置控制面板 弹窗 -->
+    <div v-if="showSettings" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-5" @click.self="showSettings = false">
+        <transition name="ios-pop">
+            <div v-if="showSettings" class="glass-card w-full max-w-sm rounded-[2.5rem] p-6 space-y-4 text-center max-h-[85vh] overflow-y-auto custom-scroll">
+                <div class="font-bold text-base text-[#1C1C1E] ios-item" :style="{ '--i': 0 }">系统控制面板</div>
+                <div class="text-xs text-apple-subtext font-bold bg-apple-bg p-3 rounded-2xl text-left ios-item" :style="{ '--i': 1 }">
+                    🧠 本地记忆库已积累：<span class="text-apple-blue font-extrabold">{{ Object.keys(memoryDB).length }}</span> 个常用商品条码
+                </div>
+                <div class="space-y-2 text-left pt-1">
+                    <button @click="copySyncData" class="w-full py-3 bg-apple-green/10 text-apple-green border border-apple-green/20 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 spring-touch ios-item" :style="{ '--i': 2 }">
+                        <span>📋</span><span>复制跨端同步文本（发至微信/QQ）</span>
+                    </button>
+                    <button @click="openPasteModal" class="w-full py-3 bg-apple-blue/10 text-apple-blue border border-apple-blue/20 rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 spring-touch ios-item" :style="{ '--i': 3 }">
+                        <span>📥</span><span>粘贴文本导入（从其他设备恢复）</span>
+                    </button>
+                    <button @click="exportData" class="w-full py-2.5 bg-black/[0.04] text-[#1C1C1E] rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 spring-touch ios-item" :style="{ '--i': 4 }">
+                        <span>💾</span><span>导出备份文件 (.json)</span>
+                    </button>
+                    <label class="w-full py-2.5 bg-black/[0.04] text-[#1C1C1E] rounded-2xl text-xs font-bold flex items-center justify-center space-x-2 spring-touch cursor-pointer ios-item" :style="{ '--i': 5 }">
+                        <span>📤</span><span>恢复/导入备份文件 (.json)</span>
+                        <input type="file" accept=".json" class="hidden" @change="importData">
+                    </label>
+                </div>
+                <hr class="border-black/[0.06] ios-item" :style="{ '--i': 6 }">
+                <div class="space-y-2 ios-item" :style="{ '--i': 7 }">
+                    <button @click="confirmClearAll" class="w-full py-2.5 bg-apple-red/10 text-apple-red rounded-2xl text-xs font-bold spring-touch">格式化清空所有数据</button>
+                    <button @click="showSettings = false" class="w-full py-2.5 bg-apple-bg text-apple-subtext rounded-2xl text-xs font-bold spring-touch">关闭</button>
+                </div>
+            </div>
+        </transition>
+    </div>
+
+    <!-- 粘贴同步弹窗 -->
+    <div v-if="pasteModalVisible" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-5" @click.self="pasteModalVisible = false">
+        <transition name="ios-pop">
+            <div v-if="pasteModalVisible" class="glass-card w-full max-w-md rounded-[2.5rem] p-6 space-y-4 max-h-[85vh] overflow-y-auto custom-scroll">
+                <div class="flex items-center justify-between ios-item" :style="{ '--i': 0 }">
+                    <div class="font-bold text-base text-[#1C1C1E]">📥 跨端粘贴同步数据</div>
+                    <button @click="pasteModalVisible = false" class="text-apple-subtext text-sm font-bold">✕</button>
+                </div>
+                <p class="text-xs text-apple-subtext leading-relaxed font-medium ios-item" :style="{ '--i': 1 }">
+                    在微信、QQ 或备忘录中复制同步文本，粘贴在下方框内，点击确认恢复即可实现多设备同步：
+                </p>
+                <textarea v-model="syncInputText" rows="6" placeholder="在此长按粘贴复制的数据文本..." class="w-full bg-apple-bg border border-black/[0.06] focus:bg-white focus:border-apple-blue rounded-2xl p-3.5 text-xs font-mono outline-none transition resize-none shadow-inner select-all ios-item" :style="{ '--i': 2 }"></textarea>
+                <div class="flex space-x-2 ios-item" :style="{ '--i': 3 }">
+                    <button @click="tryReadClipboard" class="flex-1 py-2.5 bg-black/[0.05] text-[#1C1C1E] rounded-xl text-xs font-bold spring-touch">尝试读取剪贴板</button>
+                    <button @click="confirmPasteSync" class="flex-1 py-2.5 bg-apple-blue text-white rounded-xl text-xs font-bold shadow-md shadow-apple-blue/20 spring-touch">确认解析并同步</button>
+                </div>
+            </div>
+        </transition>
+    </div>
+
+    <!-- 全局 Toast -->
+    <transition name="toast">
+        <div v-if="toast.show" class="fixed top-1/3 left-1/2 -translate-x-1/2 z-50 bg-black/80 text-white text-xs font-bold px-4 py-2.5 rounded-2xl backdrop-blur-xl shadow-2xl tracking-wide max-w-[280px] text-center border border-white/10">
+            {{ toast.msg }}
+        </div>
+    </transition>
+
+</div>
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err));
+        });
+    }
+
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+        setup() {
+            const products = ref([]);
+            const memoryDB = ref({});
+            const currentTab = ref('list');
+            const currentCategory = ref('all');
+            const expiredFilter = ref('all');
+            const searchQuery = ref('');
+            const modalVisible = ref(false);
+            const showSettings = ref(false);
+            const pasteModalVisible = ref(false);
+            const syncInputText = ref('');
+            const isEdit = ref(false);
+            const currentEditId = ref(null);
+            const isCategoryDropdownOpen = ref(false);
+
+            // ===== 保质期单位系统：天 / 月 =====
+            const shelfUnit = ref('month'); // 'day' | 'month'
+            const shelfInputRaw = ref('');
+            const lastValidResult = ref(0);
+
+            const mainRef = ref(null);
+            const scrollY = ref(0);
+            let scrollTicking = false;
+
+            const toast = ref({ show: false, msg: '' });
+            let toastTimer = null;
+            const form = ref({ name: '', cat: '食品', sl: '', slUnit: 'month', pd: '', ed: '', loc: '', note: '', bar: '' });
+
+            const categoryInfo = { '食品': '🍚', '饮料': '🥤', '调味品': '🧂', '日用品': '🧴', '化妆品': '💄', '药品': '💊', '其他': '📦' };
+            const categoryColors = { '食品': '#FF9F0A', '饮料': '#007AFF', '调味品': '#8E8E93', '日用品': '#AF52DE', '化妆品': '#FF2D55', '药品': '#34C759', '其他': '#8E8E93' };
+            const tabs = [
+                { id: 'list', name: '物品矩阵', icon: '📋' },
+                { id: 'expired', name: '临期警戒', icon: '⚠️' },
+                { id: 'warehouse', name: '地理分布', icon: '🏪' },
+                { id: 'stats', name: '品类雷达', icon: '📊' }
+            ];
+            const activeTabIndex = computed(() => Math.max(0, tabs.findIndex(tab => tab.id === currentTab.value)));
+
+            watch([modalVisible, showSettings, pasteModalVisible], ([m, s, p]) => {
+                document.body.style.overflow = (m || s || p) ? 'hidden' : '';
+            });
+
+            watch(currentTab, (newTab) => {
+                if (mainRef.value) { mainRef.value.scrollTop = 0; scrollY.value = 0; }
+                if (newTab !== 'expired') expiredFilter.value = 'all';
+            });
+
+            const getFormatDate = (date) => {
+                const d = new Date(date);
+                return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            };
+
+            // ===== 核心：按月加减算到期日（食品行业标准） =====
+            const addMonthsToDate = (dateStr, months) => {
+                const d = new Date(dateStr.replace(/-/g, '/'));
+                const originalDay = d.getDate();
+                d.setMonth(d.getMonth() + months);
+                // 如果日期变了，说明目标月没有这一天，取目标月最后一天
+                if (d.getDate() !== originalDay) {
+                    d.setDate(0);
+                }
+                return getFormatDate(d);
+            };
+
+            const calcDaysLeft = (expiryDateStr) => {
+                if (!expiryDateStr) return 0;
+                const today = new Date(); today.setHours(0,0,0,0);
+                const target = new Date(expiryDateStr.replace(/-/g, '/')); target.setHours(0,0,0,0);
+                if (isNaN(target.getTime())) return 0;
+                return Math.ceil((target - today) / 86400000);
+            };
+
+            const processedProducts = computed(() => {
+                return products.value.map(item => ({
+                    ...item,
+                    daysLeft: calcDaysLeft(item.ed)
+                })).sort((a, b) => a.daysLeft - b.daysLeft);
+            });
+
+            const filteredProducts = computed(() => {
+                const query = searchQuery.value.toLowerCase().trim();
+                return processedProducts.value.filter(item => {
+                    if (currentTab.value === 'expired') {
+                        if (item.daysLeft > 7) return false;
+                        if (expiredFilter.value === 'warning' && item.daysLeft < 0) return false;
+                        if (expiredFilter.value === 'expired' && item.daysLeft >= 0) return false;
+                        if (query && !item.name.toLowerCase().includes(query) && !(item.loc && item.loc.toLowerCase().includes(query)) && !(item.bar && item.bar.toString().includes(query))) return false;
+                        return true;
+                    }
+                    if (currentCategory.value !== 'all' && item.cat !== currentCategory.value) return false;
+                    if (query && !item.name.toLowerCase().includes(query) && !(item.loc && item.loc.toLowerCase().includes(query)) && !(item.bar && item.bar.toString().includes(query))) return false;
+                    return true;
+                });
+            });
+
+            const stats = computed(() => {
+                let normal = 0, warning = 0, expired = 0;
+                processedProducts.value.forEach(item => {
+                    if (item.daysLeft < 0) expired++;
+                    else if (item.daysLeft <= 7) warning++;
+                    else normal++;
+                });
+                return { normal, warning, expired };
+            });
+
+            const expBadgeCount = computed(() => stats.value.warning + stats.value.expired);
+
+            const warehouseStats = computed(() => {
+                const locMap = {};
+                products.value.forEach(x => { if(x.loc) locMap[x.loc] = (locMap[x.loc] || 0) + 1 });
+                return locMap;
+            });
+
+            const categoryStats = computed(() => {
+                const catMap = {};
+                products.value.forEach(x => { catMap[x.cat] = (catMap[x.cat] || 0) + 1 });
+                return catMap;
+            });
+
+            const computedShelfValue = computed(() => {
+                const raw = String(shelfInputRaw.value || '').trim();
+                if (!raw) return 0;
+                let expr = raw.replace(/×/g, '*').replace(/÷/g, '/').replace(/（/g, '(').replace(/）/g, ')');
+                const sanitized = expr.replace(/[^\d+\-*/().]/g, '');
+                if (!sanitized) return lastValidResult.value;
+                try {
+                    const result = Function('"use strict"; return (' + sanitized + ')')();
+                    if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                        const val = Math.max(0, Math.round(result));
+                        lastValidResult.value = val;
+                        return val;
+                    }
+                } catch (e) {}
+                return lastValidResult.value;
+            });
+
+            const handleShelfInput = () => {
+                form.value.sl = computedShelfValue.value;
+                form.value.slUnit = shelfUnit.value;
+                calcExpiry();
+            };
+
+            const switchUnit = (unit) => {
+                if (shelfUnit.value === unit) return;
+                shelfUnit.value = unit;
+                // 切换单位时，如果当前值在新单位下不合理，清空让用户重输
+                // 但为了体验更好，尝试智能转换：如果是 365 天 → 12 个月（近似）
+                const currentVal = computedShelfValue.value;
+                if (unit === 'month' && currentVal > 0) {
+                    // 天数转月数：粗略除以 30，取整
+                    const approxMonth = Math.round(currentVal / 30);
+                    if (approxMonth >= 1) {
+                        shelfInputRaw.value = String(approxMonth);
+                        lastValidResult.value = approxMonth;
+                    } else {
+                        shelfInputRaw.value = '1';
+                        lastValidResult.value = 1;
+                    }
+                } else if (unit === 'day' && currentVal > 0) {
+                    // 月数转天数：粗略乘 30
+                    const approxDay = currentVal * 30;
+                    shelfInputRaw.value = String(approxDay);
+                    lastValidResult.value = approxDay;
+                }
+                form.value.sl = lastValidResult.value;
+                form.value.slUnit = unit;
+                calcExpiry();
+            };
+
+            const setQuickShelf = (val, unit) => {
+                shelfUnit.value = unit;
+                shelfInputRaw.value = String(val);
+                lastValidResult.value = val;
+                form.value.sl = val;
+                form.value.slUnit = unit;
+                calcExpiry();
+            };
+
+            const closeDropdowns = () => { isCategoryDropdownOpen.value = false; };
+
+            const handleScroll = () => {
+                if (!scrollTicking) {
+                    window.requestAnimationFrame(() => {
+                        if (mainRef.value) scrollY.value = mainRef.value.scrollTop;
+                        scrollTicking = false;
+                    });
+                    scrollTicking = true;
+                }
+            };
+
+            const preprocessImage = (file, callback) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    let width = img.width, height = img.height;
+                    const maxDim = 1024;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) { height = Math.round((height * maxDim) / width); width = maxDim; }
+                        else { width = Math.round((width * maxDim) / height); height = maxDim; }
+                    }
+                    canvas.width = width; canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    callback(canvas.toDataURL('image/jpeg', 0.82));
+                    URL.revokeObjectURL(img.src);
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(img.src);
+                    triggerToast('⚠️ 图片解码失败，请换一张重试');
+                };
+                img.src = URL.createObjectURL(file);
+            };
+
+            const handleNativePhoto = (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = '';
+                if (typeof Quagga === 'undefined') {
+                    triggerToast('⚠️ 识别库载入中，请重试');
+                    return;
+                }
+                triggerToast('🔍 正在智能识别条形码...');
+                preprocessImage(file, (processedImgUrl) => {
+                    Quagga.decodeSingle({
+                        decoder: { readers: ["ean_reader", "ean_8_reader", "code_128_reader", "upc_reader", "upc_e_reader"] },
+                        locate: true, src: processedImgUrl
+                    }, (result) => {
+                        URL.revokeObjectURL(processedImgUrl);
+                        if (result && result.codeResult && result.codeResult.code) {
+                            showAddModal(result.codeResult.code);
+                        } else {
+                            triggerToast('⚠️ 未检测到有效条码，已调起录入');
+                            showAddModal('');
+                        }
+                        e.target.value = '';
+                    });
+                });
+            };
+
+            const normalizeBarKey = (bar) => {
+                const key = String(bar || '').trim();
+                if (/^\d{12}$/.test(key)) return '0' + key;
+                return key;
+            };
+
+            const checkMemory = (barcode, opts = {}) => {
+                if (!barcode) return;
+                const key = normalizeBarKey(barcode);
+                const match = memoryDB.value[key];
+                if (match) {
+                    if (!form.value.name) form.value.name = match.name;
+                    if (match.cat) form.value.cat = match.cat;
+                    if (match.sl) {
+                        shelfInputRaw.value = String(match.sl);
+                        lastValidResult.value = match.sl;
+                        // 记忆库也存单位
+                        if (match.slUnit) {
+                            shelfUnit.value = match.slUnit;
+                        } else {
+                            // 兼容旧记忆库数据（默认天）
+                            shelfUnit.value = 'day';
+                        }
+                        handleShelfInput();
+                    }
+                    triggerToast('🧠 命中记忆库：已自动填入 ' + match.name);
+                } else if (opts.notifyMiss) {
+                    triggerToast('ℹ️ 已识别条码 ' + key + '，记忆库暂无，保存后会自动记住');
+                }
+            };
+
+            const matchedMemory = computed(() => {
+                const bar = String(form.value.bar || '').trim();
+                if (!bar) return null;
+                return memoryDB.value[normalizeBarKey(bar)] || null;
+            });
+
+            // ===== 计算到期日：根据单位选择算法 =====
+            const calcExpiry = () => {
+                if (!form.value.pd) return;
+                const val = computedShelfValue.value;
+                if (val <= 0) return;
+
+                if (shelfUnit.value === 'month') {
+                    // 按月加减：直接操作年月，日期尽量保持，边界取当月最后一天
+                    form.value.ed = addMonthsToDate(form.value.pd, val);
+                } else {
+                    // 按天加减：直接加天数
+                    const d = new Date(form.value.pd.replace(/-/g, '/'));
+                    d.setDate(d.getDate() + val);
+                    form.value.ed = getFormatDate(d);
+                }
+            };
+
+            // 反向计算：从到期日反推保质期
+            const calcShelfLifeFromExpiry = () => {
+                if (form.value.pd && form.value.ed) {
+                    const pdDate = new Date(form.value.pd.replace(/-/g, '/'));
+                    const edDate = new Date(form.value.ed.replace(/-/g, '/'));
+                    const diffDays = Math.ceil((edDate - pdDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays > 0) {
+                        // 反向计算时统一按天显示，用户可手动切换单位
+                        shelfUnit.value = 'day';
+                        shelfInputRaw.value = String(diffDays);
+                        form.value.sl = diffDays;
+                        form.value.slUnit = 'day';
+                        lastValidResult.value = diffDays;
+                    }
+                }
+            };
+
+            const showAddModal = (presetBarcode = '') => {
+                isEdit.value = false; currentEditId.value = null;
+                isCategoryDropdownOpen.value = false;
+                // 默认按月，12个月
+                shelfUnit.value = 'month';
+                shelfInputRaw.value = '12';
+                lastValidResult.value = 12;
+                form.value = { 
+                    name: '', cat: '食品', sl: 12, slUnit: 'month', 
+                    pd: getFormatDate(new Date()), ed: '', loc: '', note: '', 
+                    bar: String(presetBarcode || '').trim() 
+                };
+                calcExpiry(); modalVisible.value = true;
+                if (form.value.bar) checkMemory(form.value.bar, { notifyMiss: true });
+            };
+
+            const editProduct = (item) => {
+                isEdit.value = true; currentEditId.value = item.id;
+                isCategoryDropdownOpen.value = false;
+                form.value = { ...item };
+
+                // 兼容旧数据：没有 slUnit 的默认按天
+                const unit = item.slUnit || 'day';
+                shelfUnit.value = unit;
+                shelfInputRaw.value = item.sl ? String(item.sl) : '365';
+                lastValidResult.value = item.sl || 365;
+                modalVisible.value = true;
+            };
+
+            const saveProduct = () => {
+                if (!form.value.name.trim()) return triggerToast('商品名称不能为空');
+                const finalVal = computedShelfValue.value;
+                if (!finalVal || finalVal <= 0) return triggerToast('请输入合理的保质期限');
+                if (!form.value.pd) return triggerToast('请选择生产日期');
+
+                form.value.sl = finalVal;
+                form.value.slUnit = shelfUnit.value;
+                calcExpiry();
+
+                if (form.value.bar) {
+                    memoryDB.value[normalizeBarKey(form.value.bar)] = {
+                        name: form.value.name,
+                        cat: form.value.cat,
+                        sl: form.value.sl,
+                        slUnit: form.value.slUnit
+                    };
+                    saveMemoryData();
+                }
+
+                if (isEdit.value) {
+                    const idx = products.value.findIndex(x => x.id === currentEditId.value);
+                    if (idx >= 0) products.value[idx] = { ...form.value };
+                } else {
+                    products.value.push({
+                        ...form.value,
+                        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+                    });
+                }
+                saveData(); modalVisible.value = false;
+                triggerToast('商品档案与记忆已保存');
+            };
+
+            const deleteProduct = () => {
+                products.value = products.value.filter(x => x.id !== currentEditId.value);
+                saveData(); modalVisible.value = false;
+                triggerToast('档案已删除');
+            };
+
+            const copySyncData = async () => {
+                const exportPayload = { products: products.value, memoryDB: memoryDB.value };
+                const str = JSON.stringify(exportPayload);
+                let success = false;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(str); success = true;
+                    }
+                } catch (e) {}
+                if (!success) {
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = str; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                        document.body.appendChild(ta); ta.focus(); ta.select();
+                        success = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                    } catch (err) {}
+                }
+                if (success) { triggerToast('📋 同步文本已复制！去微信/QQ发送吧'); }
+                else { syncInputText.value = str; pasteModalVisible.value = true; triggerToast('⚠️ 自动复制失败，请手动长按全选复制'); }
+            };
+
+            const openPasteModal = () => { syncInputText.value = ''; pasteModalVisible.value = true; };
+
+            const tryReadClipboard = async () => {
+                try {
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        const text = await navigator.clipboard.readText();
+                        if (text) { syncInputText.value = text; triggerToast('✅ 读取成功，请点击确认同步'); return; }
+                    }
+                } catch (err) {}
+                triggerToast('💡 手机安全限制，请在上方框内直接长按"粘贴"');
+            };
+
+            const confirmPasteSync = () => {
+                let text = syncInputText.value ? syncInputText.value.trim() : '';
+                if (!text) return triggerToast('请先输入或粘贴数据文本');
+                if (text.startsWith('```json')) text = text.replace(/^```json/, '');
+                if (text.startsWith('```')) text = text.replace(/^```/, '');
+                if (text.endsWith('```')) text = text.replace(/```$/, '');
+                text = text.trim();
+                try {
+                    const imported = JSON.parse(text);
+                    if (imported.products && Array.isArray(imported.products)) {
+                        products.value = imported.products; memoryDB.value = imported.memoryDB || {};
+                    } else if (Array.isArray(imported)) { products.value = imported; }
+                    else { return triggerToast('❌ 粘贴的数据格式不符合要求'); }
+                    saveData(); saveMemoryData();
+                    pasteModalVisible.value = false; showSettings.value = false;
+                    triggerToast('🎉 多端数据同步成功！');
+                } catch (err) { triggerToast('❌ 解析失败，请确认复制了完整的数据格式'); }
+            };
+
+            const exportData = () => {
+                const exportPayload = { products: products.value, memoryDB: memoryDB.value };
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `保质期资产备份_${getFormatDate(new Date())}.json`);
+                document.body.appendChild(downloadAnchor); downloadAnchor.click(); downloadAnchor.remove();
+                triggerToast('📦 资产与记忆库同步导出成功！');
+            };
+
+            const importData = (e) => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const imported = JSON.parse(event.target.result);
+                        if (imported.products && Array.isArray(imported.products)) {
+                            products.value = imported.products; memoryDB.value = imported.memoryDB || {};
+                        } else if (Array.isArray(imported)) { products.value = imported; }
+                        else { return triggerToast('❌ JSON 文件格式不匹配'); }
+                        saveData(); saveMemoryData(); triggerToast('📤 数据恢复成功！');
+                    } catch(err) { triggerToast('❌ 读取备份文件失败'); }
+                };
+                reader.readAsText(file); e.target.value = '';
+            };
+
+            const confirmClearAll = () => {
+                if (confirm("确定要清空所有数据和记忆库吗？该操作不可撤销！")) {
+                    products.value = []; memoryDB.value = {};
+                    saveData(); saveMemoryData();
+                    showSettings.value = false;
+                    triggerToast('所有本地数据已格式化清空');
+                }
+            };
+
+            const triggerToast = (msg) => {
+                toast.value.msg = msg; toast.value.show = true;
+                if (toastTimer) clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.value.show = false, 2800);
+            };
+
+            const getStatusClass = (days) => {
+                if (days < 0) return 'text-apple-red';
+                if (days <= 7) return 'text-apple-orange';
+                return 'text-apple-green';
+            };
+
+            const saveData = () => localStorage.setItem('sp_pro_max_v3', JSON.stringify(products.value));
+            const saveMemoryData = () => localStorage.setItem('sp_memory_db_v1', JSON.stringify(memoryDB.value));
+
+            const autoCleanExpiredMemory = () => {
+                let cleanedCount = 0;
+                products.value.forEach(item => {
+                    const days = calcDaysLeft(item.ed);
+                    if (days < -5 && item.bar) {
+                        const key = normalizeBarKey(item.bar);
+                        if (memoryDB.value[key]) { delete memoryDB.value[key]; cleanedCount++; }
+                    }
+                });
+                if (cleanedCount > 0) { saveMemoryData(); console.log(`已自动清理 ${cleanedCount} 个过期超过 5 天商品的本地记忆`); }
+            };
+
+            onMounted(() => {
+                const loader = document.getElementById('app-loading');
+                if (loader) loader.style.display = 'none';
+                try {
+                    products.value = JSON.parse(localStorage.getItem('sp_pro_max_v3')) || [];
+                    memoryDB.value = JSON.parse(localStorage.getItem('sp_memory_db_v1')) || {};
+                } catch(e) { products.value = []; memoryDB.value = {}; }
+
+                // 兼容旧数据：没有 slUnit 的商品默认补上天数单位
+                let migrated = false;
+                products.value.forEach(item => {
+                    if (!item.slUnit) { item.slUnit = 'day'; migrated = true; }
+                });
+                Object.keys(memoryDB.value).forEach(k => {
+                    if (!memoryDB.value[k].slUnit) { memoryDB.value[k].slUnit = 'day'; migrated = true; }
+                    // 12位条码补0
+                    if (/^\d{12}$/.test(k) && !memoryDB.value['0' + k]) {
+                        memoryDB.value['0' + k] = memoryDB.value[k];
+                        delete memoryDB.value[k];
+                        migrated = true;
+                    }
+                });
+                if (migrated) { saveData(); saveMemoryData(); }
+
+                if (products.value.length === 0) {
+                    const now = new Date();
+                    products.value = [
+                        { id: '1', name: '伊利蓝莓牛奶', cat: '饮料', sl: 6, slUnit: 'month', pd: getFormatDate(new Date(now.getFullYear(), now.getMonth()-6, now.getDate())), ed: getFormatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate())), loc: '冰箱冷藏', bar: '6907992520803', note: '' },
+                        { id: '2', name: '雀巢咖啡', cat: '饮料', sl: 12, slUnit: 'month', pd: getFormatDate(new Date(now.getFullYear(), now.getMonth()-12, now.getDate())), ed: getFormatDate(new Date(now.getFullYear(), now.getMonth(), now.getDate())), loc: '卧室', bar: '6917878045481', note: '' }
+                    ];
+                    memoryDB.value['6907992520803'] = { name: '伊利蓝莓牛奶', cat: '饮料', sl: 6, slUnit: 'month' };
+                    memoryDB.value['6917878045481'] = { name: '雀巢咖啡', cat: '饮料', sl: 12, slUnit: 'month' };
+                    saveData(); saveMemoryData();
+                }
+                autoCleanExpiredMemory();
+            });
+
+            return {
+                products, memoryDB, currentTab, currentCategory, expiredFilter, searchQuery,
+                modalVisible, showSettings, pasteModalVisible, syncInputText, isEdit, toast, form,
+                categoryInfo, categoryColors, tabs, activeTabIndex,
+                filteredProducts, stats, expBadgeCount, warehouseStats, categoryStats,
+                matchedMemory, isCategoryDropdownOpen,
+                // 保质期单位系统
+                shelfUnit, shelfInputRaw, computedShelfValue,
+                // 滚动
+                mainRef, scrollY, handleScroll,
+                // 方法
+                switchUnit, setQuickShelf, handleShelfInput,
+                closeDropdowns, handleNativePhoto, checkMemory, 
+                calcExpiry, calcShelfLifeFromExpiry,
+                showAddModal, editProduct, saveProduct, deleteProduct, 
+                copySyncData, openPasteModal, tryReadClipboard, confirmPasteSync,
+                exportData, importData, confirmClearAll, getStatusClass
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
