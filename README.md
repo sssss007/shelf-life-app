@@ -2,7 +2,7 @@
 
 **当前版本：1.5.5（稳定性与流畅性修复版）**
 
-一个面向手机浏览器、GitHub Pages 和 Android WebView / 套壳 APK 的本地商品保质期管理工具。
+一个面向手机浏览器、GitHub Pages 和 Android WebView的本地商品保质期管理工具。
 
 ## 功能
 
